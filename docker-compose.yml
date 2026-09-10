@@ -26,6 +26,11 @@ services:
     restart: unless-stopped
     command: ["reverb"]
     env_file: .env
+    # The base image's inherited healthcheck probes FrankenPHP's Caddy admin
+    # API, which this service never runs (it's a bare `reverb:start`, no
+    # Caddy) — without this it would sit "unhealthy" forever despite working.
+    healthcheck:
+      disable: true
     depends_on:
       db:
         condition: service_healthy
@@ -37,6 +42,8 @@ services:
     restart: unless-stopped
     command: ["queue"]
     env_file: .env
+    healthcheck:
+      disable: true
     volumes:
       - storage:/app/storage
     depends_on:
