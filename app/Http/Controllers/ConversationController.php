@@ -34,7 +34,17 @@ class ConversationController extends Controller
 
     public function show(string $token)
     {
-        $conversation = Conversation::where('token', $token)->firstOrFail();
+        $conversation = Conversation::where('token', $token)->first();
+
+        if (! $conversation) {
+            // The token in the visitor's localStorage points at a
+            // conversation that no longer exists (e.g. after a database
+            // reset). A plain 404 would leave them stuck redirecting back
+            // to this same dead link forever — send a page that clears it
+            // and offers a way to start over instead.
+            return response()->view('client.not-found', [], 404);
+        }
+
         $messages = $conversation->messages()->orderBy('created_at')->get();
 
         Auth::guard('client')->login(new ConversationGuest($conversation));
