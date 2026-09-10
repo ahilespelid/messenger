@@ -35,10 +35,10 @@ class FileMessageService
         return $message;
     }
 
-    public function stream(Message $message): Response|StreamedResponse
+    public function stream(Message $message, bool $allowDeleted = false): Response|StreamedResponse
     {
         abort_unless(
-            $message->isFile() && ! $message->deleted_at && $message->file_path
+            $message->isFile() && ($allowDeleted || ! $message->deleted_at) && $message->file_path
                 && Storage::disk('local')->exists($message->file_path),
             404
         );

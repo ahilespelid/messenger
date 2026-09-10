@@ -123,11 +123,10 @@ class MessageController extends Controller
             return response()->noContent();
         }
 
-        $message->forceFill([
-            'deleted_at' => now(),
-            'body' => '',
-            'original_body' => null,
-        ])->save();
+        // Deleting only hides the message from the normal view (deleted_at
+        // set) — the real content stays in the database untouched. Only the
+        // operator can reveal it again via the /reveal endpoint.
+        $message->forceFill(['deleted_at' => now()])->save();
 
         broadcast(new MessageUpdated($message))->toOthers();
 

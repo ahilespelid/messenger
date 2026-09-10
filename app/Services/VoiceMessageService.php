@@ -35,10 +35,10 @@ class VoiceMessageService
         return $message;
     }
 
-    public function stream(Message $message): Response|StreamedResponse
+    public function stream(Message $message, bool $allowDeleted = false): Response|StreamedResponse
     {
         abort_unless(
-            $message->isVoice() && ! $message->deleted_at && $message->voice_path
+            $message->isVoice() && ($allowDeleted || ! $message->deleted_at) && $message->voice_path
                 && Storage::disk('local')->exists($message->voice_path),
             404
         );

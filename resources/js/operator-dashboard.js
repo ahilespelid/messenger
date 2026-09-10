@@ -243,6 +243,29 @@ export default function operatorApp({ conversations, activeToken, initialMessage
             m.original_body = null;
         },
 
+        async revealMessage(m) {
+            if (!this.activeToken || m.revealing) return;
+            m.revealing = true;
+
+            try {
+                const res = await fetch(`/operator/conversations/${this.activeToken}/messages/${m.id}/reveal`, {
+                    headers: { Accept: 'application/json' },
+                });
+                if (!res.ok) return;
+
+                const data = await res.json();
+                m.body = data.body;
+                m.original_body = data.original_body;
+                m.voice_duration = data.voice_duration;
+                m.file_name = data.file_name;
+                m.file_mime = data.file_mime;
+                m.file_size = data.file_size;
+                m.revealed = true;
+            } finally {
+                m.revealing = false;
+            }
+        },
+
         async startRecording() {
             if (this.recording || this.editingId || !this.activeToken) return;
 

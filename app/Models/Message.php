@@ -112,4 +112,24 @@ class Message extends Model
             'created_at' => $this->created_at->toIso8601String(),
         ];
     }
+
+    /**
+     * Full content regardless of deleted_at — deleting a message never
+     * erases it from the database, only hides it from the normal view.
+     * Used solely by the operator-only "reveal" endpoint; never broadcast
+     * and never sent to the anonymous client guard.
+     */
+    public function toRevealArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'type' => $this->type,
+            'body' => $this->type === 'text' ? $this->body : null,
+            'original_body' => $this->original_body,
+            'voice_duration' => $this->voice_duration,
+            'file_name' => $this->file_name,
+            'file_mime' => $this->file_mime,
+            'file_size' => $this->file_size,
+        ];
+    }
 }

@@ -58,7 +58,9 @@ class MessageController extends Controller
     {
         abort_unless($message->conversation_id === $conversation->id, 404);
 
-        return $voiceMessages->stream($message);
+        // The operator can still play a deleted voice message back via the
+        // "reveal" affordance — only the client side is blocked from it.
+        return $voiceMessages->stream($message, allowDeleted: true);
     }
 
     public function storeFile(Request $request, Conversation $conversation, FileMessageService $fileMessages)
@@ -85,7 +87,7 @@ class MessageController extends Controller
     {
         abort_unless($message->conversation_id === $conversation->id, 404);
 
-        return $fileMessages->stream($message);
+        return $fileMessages->stream($message, allowDeleted: true);
     }
 
     public function update(Request $request, Conversation $conversation, Message $message)
@@ -119,15 +121,25 @@ class MessageController extends Controller
             return response()->noContent();
         }
 
-        $message->forceFill([
-            'deleted_at' => now(),
-            'body' => '',
-            'original_body' => null,
-        ])->save();
+        // Deleting only hides the message from the normal view (deleted_at
+        // set) — the real content stays in the database untouched, and can
+        // be brought back via /reveal.
+        $message->forceFill(['deleted_at' => now()])->save();
 
         broadcast(new MessageUpdated($message))->toOthers();
 
         return response()->noContent();
+    }
+
+    /**
+     * Full content of a message regardless of deleted_at — operator-only,
+     * never exposed to the client's guest guard or broadcast over the wire.
+     */
+    public function reveal(Conversation $conversation, Message $message)
+    {
+        abort_unless($message->conversation_id === $conversation->id, 404);
+
+        return response()->json($message->toRevealArray());
     }
 
     protected function authorizeOwnMessage(Message $message, Conversation $conversation): void

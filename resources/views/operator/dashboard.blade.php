@@ -62,11 +62,14 @@
                                 :class="m.sender_type === 'operator' ? 'bg-gray-900 text-white rounded-br-sm' : 'bg-white text-gray-900 rounded-bl-sm'"
                                 x-data="{ showOriginal: false }"
                             >
-                                <template x-if="m.deleted_at">
-                                    <p class="italic opacity-60">Сообщение удалено</p>
+                                <template x-if="m.deleted_at && !m.revealed">
+                                    <p class="italic opacity-60 cursor-pointer underline decoration-dotted"
+                                       @click="revealMessage(m)">
+                                        Сообщение удалено — <span x-text="m.revealing ? 'открываю…' : 'показать'"></span>
+                                    </p>
                                 </template>
 
-                                <template x-if="!m.deleted_at && m.type === 'voice'">
+                                <template x-if="(!m.deleted_at || m.revealed) && m.type === 'voice'">
                                     <div class="flex items-center gap-2 min-w-[170px] py-0.5">
                                         <button type="button" @click="toggleVoicePlay(m)"
                                                 class="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
@@ -80,17 +83,17 @@
                                     </div>
                                 </template>
 
-                                <template x-if="!m.deleted_at && isImageMessage(m)">
+                                <template x-if="(!m.deleted_at || m.revealed) && isImageMessage(m)">
                                     <a :href="fileUrl(m)" target="_blank" rel="noopener" class="block -mx-1 -mt-0.5">
                                         <img :src="fileUrl(m)" class="max-w-full max-h-64 rounded-lg" loading="lazy">
                                     </a>
                                 </template>
 
-                                <template x-if="!m.deleted_at && isVideoMessage(m)">
+                                <template x-if="(!m.deleted_at || m.revealed) && isVideoMessage(m)">
                                     <video :src="fileUrl(m)" controls preload="metadata" class="max-w-full max-h-64 rounded-lg -mx-1 -mt-0.5"></video>
                                 </template>
 
-                                <template x-if="!m.deleted_at && m.type === 'file' && !isImageMessage(m) && !isVideoMessage(m)">
+                                <template x-if="(!m.deleted_at || m.revealed) && m.type === 'file' && !isImageMessage(m) && !isVideoMessage(m)">
                                     <a :href="fileUrl(m)" class="flex items-center gap-2 min-w-[170px] py-0.5">
                                         <span class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-base"
                                               :class="m.sender_type === 'operator' ? 'bg-white/15' : 'bg-gray-900/10'">📎</span>
@@ -101,7 +104,7 @@
                                     </a>
                                 </template>
 
-                                <template x-if="!m.deleted_at && m.type !== 'voice' && m.type !== 'file'">
+                                <template x-if="(!m.deleted_at || m.revealed) && m.type !== 'voice' && m.type !== 'file'">
                                     <div>
                                         <p class="whitespace-pre-wrap break-words" x-text="m.body"></p>
                                         <template x-if="m.edited_at">
@@ -114,6 +117,9 @@
 
                                 <p class="mt-1 text-[10px] flex items-center gap-2 justify-end"
                                    :class="m.sender_type === 'operator' ? 'text-gray-300' : 'text-gray-400'">
+                                    <template x-if="m.deleted_at && m.revealed">
+                                        <span class="italic">удалено</span>
+                                    </template>
                                     <template x-if="m.sender_type === 'operator' && !m.deleted_at">
                                         <span class="flex gap-1.5">
                                             <template x-if="m.type === 'text'">

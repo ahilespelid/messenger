@@ -42,6 +42,7 @@ Route::middleware('auth')->prefix('operator')->name('operator.')->group(function
     Route::post('/conversations/{conversation:token}/messages/file', [OperatorMessageController::class, 'storeFile'])->name('conversations.messages.storeFile');
     Route::patch('/conversations/{conversation:token}/messages/{message}', [OperatorMessageController::class, 'update'])->name('conversations.messages.update');
     Route::delete('/conversations/{conversation:token}/messages/{message}', [OperatorMessageController::class, 'destroy'])->name('conversations.messages.destroy');
+    Route::get('/conversations/{conversation:token}/messages/{message}/reveal', [OperatorMessageController::class, 'reveal'])->name('conversations.messages.reveal');
     Route::get('/conversations/{conversation:token}/voice/{message}', [OperatorMessageController::class, 'streamVoice'])->name('conversations.voice.show');
     Route::get('/conversations/{conversation:token}/file/{message}', [OperatorMessageController::class, 'streamFile'])->name('conversations.file.show');
     Route::post('/conversations/{conversation:token}/read', [DashboardController::class, 'markRead'])->name('conversations.read');
