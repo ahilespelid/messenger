@@ -147,7 +147,7 @@ fi
 CURRENT_OPERATOR_EMAIL="$(grep '^OPERATOR_EMAIL=' .env | cut -d= -f2-)"
 CURRENT_OPERATOR_PASSWORD="$(grep '^OPERATOR_PASSWORD=' .env | cut -d= -f2-)"
 
-cat > credentials.txt <<EOF
+cat > demo_password.txt <<EOF
 Messenger — operator login
 Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 
@@ -157,7 +157,7 @@ Password: ${CURRENT_OPERATOR_PASSWORD}
 
 This file is regenerated on every deploy.sh run and is not tracked by git.
 EOF
-chmod 600 credentials.txt
+chmod 600 demo_password.txt
 
 echo ""
 echo "================================================================"
@@ -168,7 +168,7 @@ echo "   Operator login:  ${SCHEME}://${TARGET}/login"
 echo "   Operator email:    ${CURRENT_OPERATOR_EMAIL}"
 echo "   Operator password: ${CURRENT_OPERATOR_PASSWORD}"
 echo ""
-echo "   Also saved to: $(pwd)/credentials.txt"
+echo "   Also saved to: $(pwd)/demo_password.txt"
 if [[ "$MODE" == "ip" ]]; then
     echo ""
     echo " Running over plain HTTP on the IP — no domain yet, so no HTTPS."
