@@ -141,20 +141,34 @@ if ! grep -q '^VAPID_PUBLIC_KEY=.\+' .env; then
     docker compose up -d --force-recreate app queue
 fi
 
+# Always write the current credentials to a plain file — copy/pasting from
+# here avoids browser autofill silently substituting an old saved password,
+# which is exactly what happened testing this.
+CURRENT_OPERATOR_EMAIL="$(grep '^OPERATOR_EMAIL=' .env | cut -d= -f2-)"
+CURRENT_OPERATOR_PASSWORD="$(grep '^OPERATOR_PASSWORD=' .env | cut -d= -f2-)"
+
+cat > credentials.txt <<EOF
+Messenger — operator login
+Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+URL:      ${SCHEME}://${TARGET}/login
+Email:    ${CURRENT_OPERATOR_EMAIL}
+Password: ${CURRENT_OPERATOR_PASSWORD}
+
+This file is regenerated on every deploy.sh run and is not tracked by git.
+EOF
+chmod 600 credentials.txt
+
 echo ""
 echo "================================================================"
 echo " Deployed."
 echo ""
 echo "   Client widget:   ${SCHEME}://${TARGET}"
 echo "   Operator login:  ${SCHEME}://${TARGET}/login"
-if [[ "${NEW_ENV:-0}" -eq 1 ]]; then
-    echo "   Operator email:    ${OPERATOR_EMAIL}"
-    echo "   Operator password: ${OPERATOR_PASSWORD}"
-    echo ""
-    echo "   (These credentials are saved in .env — OPERATOR_EMAIL / OPERATOR_PASSWORD)"
-else
-    echo "   Operator password unchanged — see OPERATOR_PASSWORD in .env"
-fi
+echo "   Operator email:    ${CURRENT_OPERATOR_EMAIL}"
+echo "   Operator password: ${CURRENT_OPERATOR_PASSWORD}"
+echo ""
+echo "   Also saved to: $(pwd)/credentials.txt"
 if [[ "$MODE" == "ip" ]]; then
     echo ""
     echo " Running over plain HTTP on the IP — no domain yet, so no HTTPS."
