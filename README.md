@@ -103,8 +103,26 @@ gh repo create <ваш-аккаунт>/messenger --private --source=. --remote=o
 
 ### 3. Разверните на сервере
 
+Автоматически (рекомендуется для чистого Debian 13 — ставит Docker, генерирует
+все пароли/ключи, собирает и запускает всё одной командой):
+
 ```bash
-git clone https://github.com/<ваш-аккаунт>/messenger.git
+git clone https://github.com/ahilespelid/messenger.git
+cd messenger
+sudo ./deploy.sh chat.example.com admin@example.com
+```
+
+В конце скрипт выведет email и пароль оператора (они же сохранены в `.env`).
+Повторный запуск `sudo ./deploy.sh ...` на уже развёрнутом сервере просто
+подтянет свежий код, пересоберёт образы и перезапустит контейнеры — `.env`
+не трогает.
+
+Либо вручную, теми же шагами, что описаны в разделе «Локальный запуск» выше,
+только с `APP_DOMAIN=ваш-домен` и без `HTTP_PORT`/`HTTPS_PORT` (порты 80/443
+по умолчанию):
+
+```bash
+git clone https://github.com/ahilespelid/messenger.git
 cd messenger
 cp .env.example .env
 nano .env   # впишите APP_DOMAIN=ваш-домен, пароли, ключи (см. раздел выше)
