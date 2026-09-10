@@ -98,14 +98,29 @@ if [[ ! -f .env ]]; then
     sed -i "s|^REVERB_APP_SECRET=.*|REVERB_APP_SECRET=${REVERB_APP_SECRET}|" .env
     sed -i "s|^OPERATOR_PASSWORD=.*|OPERATOR_PASSWORD=${OPERATOR_PASSWORD}|" .env
 
+    # OPERATOR_EMAIL identifies which user row the seeder treats as "the"
+    # operator — it must never change on a later re-run (e.g. switching from
+    # an IP to a domain), or the seeder creates a second account instead of
+    # updating the existing one. Set it once, here, on first install only.
+    sed -i "s|^VAPID_SUBJECT=.*|VAPID_SUBJECT=mailto:${OPERATOR_EMAIL}|" .env
+    sed -i "s|^OPERATOR_EMAIL=.*|OPERATOR_EMAIL=${OPERATOR_EMAIL}|" .env
+
     NEW_ENV=1
 else
-    echo "    .env already exists — keeping existing secrets, syncing domain/scheme"
+    echo "    .env already exists — keeping existing secrets and operator email"
     NEW_ENV=0
+
+    EXISTING_EMAIL="$(grep '^OPERATOR_EMAIL=' .env | cut -d= -f2-)"
+    if [[ "$2" != "" && "$2" != "$EXISTING_EMAIL" ]]; then
+        echo "    Note: ignoring '$2' — this server's operator account is"
+        echo "    already ${EXISTING_EMAIL}. To add another operator, use:"
+        echo "        docker compose exec app php artisan operator:create <email> <password> [name]"
+    fi
 fi
 
 # These are safe to re-sync on every run (e.g. switching from a bare IP to a
-# domain later never touches secrets, only where/how the site is reachable).
+# domain later never touches secrets or identity, only where/how the site is
+# reachable).
 sed -i "s|^APP_ENV=.*|APP_ENV=production|" .env
 sed -i "s|^APP_DEBUG=.*|APP_DEBUG=false|" .env
 sed -i "s|^APP_URL=.*|APP_URL=${SCHEME}://${TARGET}|" .env
@@ -113,8 +128,6 @@ sed -i "s|^APP_DOMAIN=.*|APP_DOMAIN=${TARGET}|" .env
 sed -i "s|^APP_HTTPS=.*|APP_HTTPS=${APP_HTTPS_VALUE}|" .env
 sed -i "s|^REVERB_CLIENT_PORT=.*|REVERB_CLIENT_PORT=${REVERB_PORT_VALUE}|" .env
 sed -i "s|^REVERB_CLIENT_SCHEME=.*|REVERB_CLIENT_SCHEME=${SCHEME}|" .env
-sed -i "s|^VAPID_SUBJECT=.*|VAPID_SUBJECT=mailto:${OPERATOR_EMAIL}|" .env
-sed -i "s|^OPERATOR_EMAIL=.*|OPERATOR_EMAIL=${OPERATOR_EMAIL}|" .env
 
 echo "==> Building images (this can take a few minutes the first time)"
 docker compose build
