@@ -33,11 +33,6 @@ class MessageCreated implements ShouldBroadcast
 
     public function broadcastWith(): array
     {
-        return [
-            'id' => $this->message->id,
-            'sender_type' => $this->message->sender_type,
-            'body' => $this->message->body,
-            'created_at' => $this->message->created_at->toIso8601String(),
-        ];
+        return $this->message->toBroadcastArray();
     }
 }

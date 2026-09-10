@@ -45,13 +45,7 @@ class DashboardController extends Controller
                 'client_name' => $conversation->client_name,
                 'client_email' => $conversation->client_email,
             ],
-            'messages' => $messages->map(fn ($m) => [
-                'id' => $m->id,
-                'sender_type' => $m->sender_type,
-                'body' => $m->body,
-                'read_at' => $m->read_at?->toIso8601String(),
-                'created_at' => $m->created_at->toIso8601String(),
-            ]),
+            'messages' => $messages->map(fn ($m) => $m->toBroadcastArray()),
         ]);
     }
 

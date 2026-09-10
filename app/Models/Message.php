@@ -15,11 +15,16 @@ class Message extends Model
         'sender_type',
         'user_id',
         'body',
+        'original_body',
         'read_at',
+        'edited_at',
+        'deleted_at',
     ];
 
     protected $casts = [
         'read_at' => 'datetime',
+        'edited_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     public function conversation(): BelongsTo
@@ -33,8 +38,11 @@ class Message extends Model
             'id' => $this->id,
             'conversation_token' => $this->conversation->token,
             'sender_type' => $this->sender_type,
-            'body' => $this->body,
+            'body' => $this->deleted_at ? null : $this->body,
+            'original_body' => $this->deleted_at ? null : $this->original_body,
             'read_at' => $this->read_at?->toIso8601String(),
+            'edited_at' => $this->edited_at?->toIso8601String(),
+            'deleted_at' => $this->deleted_at?->toIso8601String(),
             'created_at' => $this->created_at->toIso8601String(),
         ];
     }
