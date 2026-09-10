@@ -1,0 +1,16 @@
+.git
+.gitignore
+node_modules
+vendor
+public/build
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/logs/*
+.env
+.env.*
+!.env.example
+tests
+*.md
+.editorconfig
+.phpunit.result.cache
