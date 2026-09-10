@@ -7,11 +7,12 @@ function formatTime(iso) {
     return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-export default function operatorApp({ conversations, colleagues, meId, activeToken, initialMessages }) {
+export default function operatorApp({ conversations, colleagues, meId, meName, activeToken, initialMessages }) {
     return {
         conversations: conversations || [],
         colleagues: colleagues || [],
         meId,
+        meName,
         activeKind: 'client', // 'client' | 'team'
         activeToken: activeToken || null,
         activeColleagueId: null,

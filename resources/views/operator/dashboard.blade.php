@@ -10,6 +10,7 @@
         ])),
         colleagues: @js($colleagues),
         meId: @js(auth()->id()),
+        meName: @js(auth()->user()->name),
         activeToken: @js($activeConversation?->token),
         initialMessages: @js(collect($messages)->map(fn ($m) => $m->toBroadcastArray())),
     })"
@@ -24,9 +25,14 @@
             </form>
         </div>
         <div class="flex-1 overflow-y-auto">
-            <template x-if="colleagues.length > 0">
-                <div class="border-b border-gray-100">
-                    <p class="px-4 pt-3 pb-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Команда</p>
+            <div class="border-b border-gray-100">
+                <p class="px-4 pt-3 pb-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Команда</p>
+                <div class="w-full px-4 py-2.5 flex items-center gap-2 bg-gray-50/70">
+                    <span class="w-2 h-2 rounded-full shrink-0 bg-green-500"></span>
+                    <p class="font-medium text-gray-900 truncate text-sm flex-1" x-text="meName"></p>
+                    <span class="shrink-0 text-[10px] text-gray-400">вы</span>
+                </div>
+                <template x-if="colleagues.length > 0">
                     <template x-for="op in colleagues" :key="op.id">
                         <button type="button" @click="selectColleague(op.id)"
                                 class="w-full text-left px-4 py-2.5 hover:bg-gray-50 flex items-center gap-2"
@@ -41,8 +47,8 @@
                                   x-text="op.unread_count"></span>
                         </button>
                     </template>
-                </div>
-            </template>
+                </template>
+            </div>
 
             <template x-for="c in conversations" :key="c.token">
                 <button type="button" @click="selectConversation(c.token)"
