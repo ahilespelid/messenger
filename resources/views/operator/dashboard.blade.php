@@ -54,7 +54,7 @@
                     </div>
                 </header>
 
-                <main class="flex-1 overflow-y-auto px-3 py-4 space-y-2" x-ref="scroll">
+                <main class="chat-pattern flex-1 overflow-y-auto px-3 py-4 space-y-2" x-ref="scroll">
                     <template x-for="m in messages" :key="m.id">
                         <div class="flex" :class="m.sender_type === 'operator' ? 'justify-end' : 'justify-start'">
                             <div

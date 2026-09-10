@@ -11,3 +11,10 @@
 [x-cloak] {
     display: none !important;
 }
+
+.chat-pattern {
+    background-color: #ffffff;
+    background-image: url('/patterns/chat-doodles.svg');
+    background-repeat: repeat;
+    background-size: 280px 280px;
+}
