@@ -8,6 +8,7 @@ use App\Events\TeamMessageUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\TeamMessage;
 use App\Models\User;
+use App\Services\TeamVoiceMessageService;
 use Illuminate\Http\Request;
 
 class TeamMessageController extends Controller
@@ -53,11 +54,42 @@ class TeamMessageController extends Controller
         return response()->json(['id' => $message->id, 'created_at' => $message->created_at->toIso8601String()]);
     }
 
+    public function storeVoice(Request $request, User $colleague, TeamVoiceMessageService $voiceMessages)
+    {
+        abort_if($colleague->id === $request->user()->id, 422, "Can't message yourself.");
+
+        $data = $request->validate([
+            'audio' => ['required', 'file', 'max:10240'],
+            'duration' => ['required', 'integer', 'min:1', 'max:300'],
+        ]);
+
+        $message = $voiceMessages->store($request->user()->id, $colleague->id, $data['audio'], $data['duration']);
+
+        broadcast(new TeamMessageCreated($message))->toOthers();
+
+        return response()->json([
+            'id' => $message->id,
+            'voice_duration' => $message->voice_duration,
+            'created_at' => $message->created_at->toIso8601String(),
+        ]);
+    }
+
+    public function streamVoice(User $colleague, TeamMessage $message, TeamVoiceMessageService $voiceMessages)
+    {
+        abort_unless(
+            in_array($message->sender_id, [$colleague->id], true) || in_array($message->recipient_id, [$colleague->id], true),
+            404
+        );
+
+        return $voiceMessages->stream($message, allowDeleted: true);
+    }
+
     public function update(Request $request, User $colleague, TeamMessage $message)
     {
         $this->authorizeOwnMessage($request, $colleague, $message);
 
         abort_if($message->deleted_at, 422, 'Message already deleted.');
+        abort_if($message->type !== 'text', 422, 'Only text messages can be edited.');
 
         $data = $request->validate([
             'body' => ['required', 'string', 'max:4000'],

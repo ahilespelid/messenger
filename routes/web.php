@@ -51,6 +51,8 @@ Route::middleware('auth')->prefix('operator')->name('operator.')->group(function
     // Internal DMs between operators ("pinned" colleagues in the sidebar)
     Route::get('/team/{colleague}/messages', [TeamMessageController::class, 'index'])->name('team.messages');
     Route::post('/team/{colleague}/messages', [TeamMessageController::class, 'store'])->name('team.messages.store');
+    Route::post('/team/{colleague}/messages/voice', [TeamMessageController::class, 'storeVoice'])->name('team.messages.storeVoice');
+    Route::get('/team/{colleague}/voice/{message}', [TeamMessageController::class, 'streamVoice'])->name('team.voice.show');
     Route::patch('/team/{colleague}/messages/{message}', [TeamMessageController::class, 'update'])->name('team.messages.update');
     Route::delete('/team/{colleague}/messages/{message}', [TeamMessageController::class, 'destroy'])->name('team.messages.destroy');
     Route::get('/team/{colleague}/messages/{message}/reveal', [TeamMessageController::class, 'reveal'])->name('team.messages.reveal');

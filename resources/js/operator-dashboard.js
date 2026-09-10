@@ -400,6 +400,7 @@ export default function operatorApp({ conversations, colleagues, meId, meName, a
                 const data = await res.json();
                 this.teamMessages.push({
                     id: data.id,
+                    type: 'text',
                     sender_id: this.meId,
                     recipient_id: this.activeColleagueId,
                     body: text,
@@ -484,6 +485,7 @@ export default function operatorApp({ conversations, colleagues, meId, meName, a
                 const data = await res.json();
                 m.body = data.body;
                 m.original_body = data.original_body;
+                m.voice_duration = data.voice_duration;
                 m.revealed = true;
             } finally {
                 m.revealing = false;
@@ -495,6 +497,7 @@ export default function operatorApp({ conversations, colleagues, meId, meName, a
             if (!message) return;
             message.body = e.body;
             message.original_body = e.original_body;
+            message.voice_duration = e.voice_duration;
             message.edited_at = e.edited_at;
             message.deleted_at = e.deleted_at;
         },
@@ -513,7 +516,9 @@ export default function operatorApp({ conversations, colleagues, meId, meName, a
         // --- Voice ---
 
         async startRecording() {
-            if (this.recording || this.editingId || !this.activeToken) return;
+            if (this.recording || this.editingId) return;
+            if (this.activeKind === 'client' && !this.activeToken) return;
+            if (this.activeKind === 'team' && !this.activeColleagueId) return;
 
             this.recorder = createRecorder();
             try {
@@ -547,7 +552,16 @@ export default function operatorApp({ conversations, colleagues, meId, meName, a
             const blob = await this.recorder.stop();
             this.recorder = null;
 
-            if (!blob || duration < 1 || !this.activeToken) return;
+            if (!blob || duration < 1) return;
+
+            if (this.activeKind === 'team') {
+                return this.sendTeamVoice(blob, duration);
+            }
+            return this.sendClientVoice(blob, duration);
+        },
+
+        async sendClientVoice(blob, duration) {
+            if (!this.activeToken) return;
 
             const form = new FormData();
             form.append('audio', blob, 'voice.webm');
@@ -578,7 +592,43 @@ export default function operatorApp({ conversations, colleagues, meId, meName, a
             this.scrollToBottom();
         },
 
+        async sendTeamVoice(blob, duration) {
+            if (!this.activeColleagueId) return;
+
+            const form = new FormData();
+            form.append('audio', blob, 'voice.webm');
+            form.append('duration', duration);
+
+            const res = await fetch(`/operator/team/${this.activeColleagueId}/messages/voice`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': window.APP_CONFIG.csrfToken,
+                    'X-Socket-ID': echo.socketId() || '',
+                },
+                body: form,
+            });
+            const data = await res.json();
+
+            this.teamMessages.push({
+                id: data.id,
+                type: 'voice',
+                body: null,
+                sender_id: this.meId,
+                recipient_id: this.activeColleagueId,
+                read_at: null,
+                edited_at: null,
+                original_body: null,
+                deleted_at: null,
+                voice_duration: data.voice_duration,
+                created_at: data.created_at,
+            });
+            this.scrollToBottom();
+        },
+
         voiceUrl(m) {
+            if (this.activeKind === 'team') {
+                return `/operator/team/${this.activeColleagueId}/voice/${m.id}`;
+            }
             return `/operator/conversations/${this.activeToken}/voice/${m.id}`;
         },
 
