@@ -14,9 +14,11 @@ Route::post('/start', [ConversationController::class, 'start'])->name('conversat
 Route::get('/c/{token}', [ConversationController::class, 'show'])->name('conversation.show');
 Route::post('/c/{token}/messages', [MessageController::class, 'store'])->name('conversation.messages.store');
 Route::post('/c/{token}/messages/voice', [MessageController::class, 'storeVoice'])->name('conversation.messages.storeVoice');
+Route::post('/c/{token}/messages/file', [MessageController::class, 'storeFile'])->name('conversation.messages.storeFile');
 Route::patch('/c/{token}/messages/{message}', [MessageController::class, 'update'])->name('conversation.messages.update');
 Route::delete('/c/{token}/messages/{message}', [MessageController::class, 'destroy'])->name('conversation.messages.destroy');
 Route::get('/c/{token}/voice/{message}', [MessageController::class, 'streamVoice'])->name('conversation.voice.show');
+Route::get('/c/{token}/file/{message}', [MessageController::class, 'streamFile'])->name('conversation.file.show');
 Route::post('/c/{token}/read', [ConversationController::class, 'markRead'])->name('conversation.read');
 
 // Browser push subscriptions (used by both the client widget and the operator dashboard)
@@ -37,8 +39,10 @@ Route::middleware('auth')->prefix('operator')->name('operator.')->group(function
     Route::get('/conversations/{conversation:token}/messages', [DashboardController::class, 'messagesJson'])->name('conversations.messages');
     Route::post('/conversations/{conversation:token}/messages', [OperatorMessageController::class, 'store'])->name('conversations.messages.store');
     Route::post('/conversations/{conversation:token}/messages/voice', [OperatorMessageController::class, 'storeVoice'])->name('conversations.messages.storeVoice');
+    Route::post('/conversations/{conversation:token}/messages/file', [OperatorMessageController::class, 'storeFile'])->name('conversations.messages.storeFile');
     Route::patch('/conversations/{conversation:token}/messages/{message}', [OperatorMessageController::class, 'update'])->name('conversations.messages.update');
     Route::delete('/conversations/{conversation:token}/messages/{message}', [OperatorMessageController::class, 'destroy'])->name('conversations.messages.destroy');
     Route::get('/conversations/{conversation:token}/voice/{message}', [OperatorMessageController::class, 'streamVoice'])->name('conversations.voice.show');
+    Route::get('/conversations/{conversation:token}/file/{message}', [OperatorMessageController::class, 'streamFile'])->name('conversations.file.show');
     Route::post('/conversations/{conversation:token}/read', [DashboardController::class, 'markRead'])->name('conversations.read');
 });

@@ -21,6 +21,10 @@ class Message extends Model
         'voice_path',
         'voice_mime',
         'voice_duration',
+        'file_path',
+        'file_name',
+        'file_mime',
+        'file_size',
         'read_at',
         'edited_at',
         'deleted_at',
@@ -42,6 +46,21 @@ class Message extends Model
         return $this->type === 'voice';
     }
 
+    public function isFile(): bool
+    {
+        return $this->type === 'file';
+    }
+
+    public function isImage(): bool
+    {
+        return $this->isFile() && str_starts_with((string) $this->file_mime, 'image/');
+    }
+
+    public function isVideoFile(): bool
+    {
+        return $this->isFile() && str_starts_with((string) $this->file_mime, 'video/');
+    }
+
     /**
      * A short, human label used where the real content can't be shown
      * (push notification body, conversation list preview).
@@ -56,21 +75,37 @@ class Message extends Model
             return '🎤 Голосовое сообщение';
         }
 
+        if ($this->isImage()) {
+            return '🖼️ Фото';
+        }
+
+        if ($this->isVideoFile()) {
+            return '🎬 Видео';
+        }
+
+        if ($this->isFile()) {
+            return '📎 '.($this->file_name ?: 'Файл');
+        }
+
         return Str::limit($this->body, $limit);
     }
 
     public function toBroadcastArray(): array
     {
         $deleted = (bool) $this->deleted_at;
+        $isTextVisible = ! $deleted && $this->type === 'text';
 
         return [
             'id' => $this->id,
             'conversation_token' => $this->conversation->token,
             'sender_type' => $this->sender_type,
             'type' => $this->type,
-            'body' => $deleted ? null : ($this->isVoice() ? null : $this->body),
+            'body' => $isTextVisible ? $this->body : null,
             'original_body' => $deleted ? null : $this->original_body,
             'voice_duration' => $deleted ? null : $this->voice_duration,
+            'file_name' => $deleted ? null : $this->file_name,
+            'file_mime' => $deleted ? null : $this->file_mime,
+            'file_size' => $deleted ? null : $this->file_size,
             'read_at' => $this->read_at?->toIso8601String(),
             'edited_at' => $this->edited_at?->toIso8601String(),
             'deleted_at' => $this->deleted_at?->toIso8601String(),

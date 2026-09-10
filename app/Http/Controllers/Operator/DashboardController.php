@@ -72,6 +72,7 @@ class DashboardController extends Controller
     {
         return Conversation::query()
             ->withCount(['messages as unread_count' => fn ($q) => $q->where('sender_type', 'client')->whereNull('read_at')])
+            ->with(['messages' => fn ($q) => $q->latest()->limit(1)])
             ->orderByDesc('last_message_at')
             ->orderByDesc('created_at')
             ->get();

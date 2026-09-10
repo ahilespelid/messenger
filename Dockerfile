@@ -42,6 +42,14 @@ FROM dunglas/frankenphp:php8.4 AS runtime
 RUN install-php-extensions pdo_mysql bcmath pcntl intl opcache >/dev/null \
     && rm -rf /var/lib/apt/lists/* /tmp/*
 
+# Raise upload limits for shared files/images/video (default 2M/8M is too
+# small for anything but a text message).
+RUN { \
+        echo 'upload_max_filesize=30M'; \
+        echo 'post_max_size=32M'; \
+        echo 'max_execution_time=120'; \
+    } > /usr/local/etc/php/conf.d/messenger-uploads.ini
+
 WORKDIR /app
 
 COPY --from=vendor /app /app

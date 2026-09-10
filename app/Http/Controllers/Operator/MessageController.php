@@ -8,6 +8,7 @@ use App\Events\MessageUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Services\FileMessageService;
 use App\Services\VoiceMessageService;
 use Illuminate\Http\Request;
 
@@ -60,12 +61,39 @@ class MessageController extends Controller
         return $voiceMessages->stream($message);
     }
 
+    public function storeFile(Request $request, Conversation $conversation, FileMessageService $fileMessages)
+    {
+        $data = $request->validate([
+            'file' => ['required', 'file', 'max:25600'],
+        ]);
+
+        $message = $fileMessages->store($conversation, 'operator', $request->user()->id, $data['file']);
+
+        broadcast(new MessageCreated($message))->toOthers();
+        broadcast(new ConversationUpdated($conversation));
+
+        return response()->json([
+            'id' => $message->id,
+            'file_name' => $message->file_name,
+            'file_mime' => $message->file_mime,
+            'file_size' => $message->file_size,
+            'created_at' => $message->created_at->toIso8601String(),
+        ]);
+    }
+
+    public function streamFile(Conversation $conversation, Message $message, FileMessageService $fileMessages)
+    {
+        abort_unless($message->conversation_id === $conversation->id, 404);
+
+        return $fileMessages->stream($message);
+    }
+
     public function update(Request $request, Conversation $conversation, Message $message)
     {
         $this->authorizeOwnMessage($message, $conversation);
 
         abort_if($message->deleted_at, 422, 'Message already deleted.');
-        abort_if($message->isVoice(), 422, 'Voice messages cannot be edited.');
+        abort_if($message->type !== 'text', 422, 'Only text messages can be edited.');
 
         $data = $request->validate([
             'body' => ['required', 'string', 'max:4000'],

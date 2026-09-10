@@ -39,7 +39,28 @@
                         </div>
                     </template>
 
-                    <template x-if="!m.deleted_at && m.type !== 'voice'">
+                    <template x-if="!m.deleted_at && isImageMessage(m)">
+                        <a :href="fileUrl(m)" target="_blank" rel="noopener" class="block -mx-1 -mt-0.5">
+                            <img :src="fileUrl(m)" class="max-w-full max-h-64 rounded-lg" loading="lazy">
+                        </a>
+                    </template>
+
+                    <template x-if="!m.deleted_at && isVideoMessage(m)">
+                        <video :src="fileUrl(m)" controls preload="metadata" class="max-w-full max-h-64 rounded-lg -mx-1 -mt-0.5"></video>
+                    </template>
+
+                    <template x-if="!m.deleted_at && m.type === 'file' && !isImageMessage(m) && !isVideoMessage(m)">
+                        <a :href="fileUrl(m)" class="flex items-center gap-2 min-w-[170px] py-0.5">
+                            <span class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-base"
+                                  :class="m.sender_type === 'client' ? 'bg-white/15' : 'bg-gray-900/10'">📎</span>
+                            <span class="min-w-0">
+                                <span class="block truncate underline" x-text="m.file_name"></span>
+                                <span class="block text-[10px] opacity-70" x-text="formatFileSize(m.file_size)"></span>
+                            </span>
+                        </a>
+                    </template>
+
+                    <template x-if="!m.deleted_at && m.type !== 'voice' && m.type !== 'file'">
                         <div>
                             <p class="whitespace-pre-wrap break-words" x-text="m.body"></p>
                             <template x-if="m.edited_at">
@@ -54,7 +75,7 @@
                        :class="m.sender_type === 'client' ? 'text-gray-300' : 'text-gray-400'">
                         <template x-if="m.sender_type === 'client' && !m.deleted_at">
                             <span class="flex gap-1.5">
-                                <template x-if="m.type !== 'voice'">
+                                <template x-if="m.type === 'text'">
                                     <button type="button" class="underline" @click="startEdit(m)">ред.</button>
                                 </template>
                                 <button type="button" class="underline" @click="deleteMessage(m)">удалить</button>
@@ -87,6 +108,11 @@
             placeholder="Написать сообщение..."
             class="flex-1 resize-none rounded-2xl border border-gray-300 px-4 py-2 focus:border-gray-900 focus:ring-gray-900 text-sm"
         ></textarea>
+        <input type="file" x-ref="fileInput" @change="onFileSelected($event)" class="hidden">
+        <button type="button" x-show="!body.trim() && !editingId" @click="pickFile()"
+                class="shrink-0 bg-gray-100 text-gray-700 rounded-full w-10 h-10 flex items-center justify-center">
+            &#128206;
+        </button>
         <button type="button" x-show="!body.trim() && !editingId" @click="startRecording()"
                 class="shrink-0 bg-gray-100 text-gray-700 rounded-full w-10 h-10 flex items-center justify-center">
             &#127908;

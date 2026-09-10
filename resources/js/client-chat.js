@@ -1,6 +1,7 @@
 import echo from './echo';
 import { enablePushNotifications } from './push';
-import { createRecorder, formatDuration } from './voice-recorder';
+import { createRecorder } from './voice-recorder';
+import { formatDuration, formatFileSize } from './format';
 
 function formatTime(iso) {
     return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -63,6 +64,7 @@ export default function clientChat({ token, initialMessages }) {
 
         formatTime,
         formatDuration,
+        formatFileSize,
 
         applyUpdate(e) {
             const message = this.messages.find((m) => m.id === e.id);
@@ -278,6 +280,62 @@ export default function clientChat({ token, initialMessages }) {
             const audio = this.$refs.audioPlayer;
             if (!audio || !audio.duration) return;
             this.audioProgress = (audio.currentTime / audio.duration) * 100;
+        },
+
+        pickFile() {
+            this.$refs.fileInput?.click();
+        },
+
+        async onFileSelected(event) {
+            const file = event.target.files[0];
+            event.target.value = '';
+            if (!file) return;
+
+            const form = new FormData();
+            form.append('file', file);
+
+            const res = await fetch(`/c/${this.token}/messages/file`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': window.APP_CONFIG.csrfToken,
+                    'X-Socket-ID': echo.socketId() || '',
+                },
+                body: form,
+            });
+
+            if (!res.ok) {
+                alert('Не удалось отправить файл (возможно, слишком большой — максимум 25 МБ).');
+                return;
+            }
+
+            const data = await res.json();
+            this.messages.push({
+                id: data.id,
+                type: 'file',
+                body: null,
+                sender_type: 'client',
+                read_at: null,
+                edited_at: null,
+                original_body: null,
+                deleted_at: null,
+                file_name: data.file_name,
+                file_mime: data.file_mime,
+                file_size: data.file_size,
+                created_at: data.created_at,
+            });
+            this.scrollToBottom();
+        },
+
+        fileUrl(m) {
+            return `/c/${this.token}/file/${m.id}`;
+        },
+
+        isImageMessage(m) {
+            return m.type === 'file' && (m.file_mime || '').startsWith('image/');
+        },
+
+        isVideoMessage(m) {
+            return m.type === 'file' && (m.file_mime || '').startsWith('video/');
         },
 
         markRead() {
