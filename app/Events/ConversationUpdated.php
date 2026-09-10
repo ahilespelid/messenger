@@ -8,7 +8,6 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Str;
 
 class ConversationUpdated implements ShouldBroadcast
 {
@@ -38,7 +37,7 @@ class ConversationUpdated implements ShouldBroadcast
         return [
             'token' => $this->conversation->token,
             'client_name' => $this->conversation->client_name,
-            'last_message' => $lastMessage ? Str::limit($lastMessage->body, 80) : null,
+            'last_message' => $lastMessage?->previewText(80),
             'last_message_at' => $this->conversation->last_message_at?->toIso8601String(),
             'unread_count' => $this->conversation->unreadCountFor('operator'),
         ];

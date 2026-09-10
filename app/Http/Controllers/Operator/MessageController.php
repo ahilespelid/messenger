@@ -8,6 +8,7 @@ use App\Events\MessageUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Services\VoiceMessageService;
 use Illuminate\Http\Request;
 
 class MessageController extends Controller
@@ -21,6 +22,7 @@ class MessageController extends Controller
         $message = $conversation->messages()->create([
             'sender_type' => 'operator',
             'user_id' => $request->user()->id,
+            'type' => 'text',
             'body' => $data['body'],
         ]);
 
@@ -32,11 +34,38 @@ class MessageController extends Controller
         return response()->json(['id' => $message->id, 'created_at' => $message->created_at->toIso8601String()]);
     }
 
+    public function storeVoice(Request $request, Conversation $conversation, VoiceMessageService $voiceMessages)
+    {
+        $data = $request->validate([
+            'audio' => ['required', 'file', 'max:10240'],
+            'duration' => ['required', 'integer', 'min:1', 'max:300'],
+        ]);
+
+        $message = $voiceMessages->store($conversation, 'operator', $request->user()->id, $data['audio'], $data['duration']);
+
+        broadcast(new MessageCreated($message))->toOthers();
+        broadcast(new ConversationUpdated($conversation));
+
+        return response()->json([
+            'id' => $message->id,
+            'voice_duration' => $message->voice_duration,
+            'created_at' => $message->created_at->toIso8601String(),
+        ]);
+    }
+
+    public function streamVoice(Conversation $conversation, Message $message, VoiceMessageService $voiceMessages)
+    {
+        abort_unless($message->conversation_id === $conversation->id, 404);
+
+        return $voiceMessages->stream($message);
+    }
+
     public function update(Request $request, Conversation $conversation, Message $message)
     {
         $this->authorizeOwnMessage($message, $conversation);
 
         abort_if($message->deleted_at, 422, 'Message already deleted.');
+        abort_if($message->isVoice(), 422, 'Voice messages cannot be edited.');
 
         $data = $request->validate([
             'body' => ['required', 'string', 'max:4000'],

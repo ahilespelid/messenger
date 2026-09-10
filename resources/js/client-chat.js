@@ -1,5 +1,6 @@
 import echo from './echo';
 import { enablePushNotifications } from './push';
+import { createRecorder, formatDuration } from './voice-recorder';
 
 function formatTime(iso) {
     return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -13,6 +14,12 @@ export default function clientChat({ token, initialMessages }) {
         sending: false,
         online: false,
         editingId: null,
+        recording: false,
+        recordSeconds: 0,
+        recordTimer: null,
+        recorder: null,
+        playingId: null,
+        audioProgress: 0,
 
         init() {
             try {
@@ -55,6 +62,7 @@ export default function clientChat({ token, initialMessages }) {
         },
 
         formatTime,
+        formatDuration,
 
         applyUpdate(e) {
             const message = this.messages.find((m) => m.id === e.id);
@@ -98,6 +106,7 @@ export default function clientChat({ token, initialMessages }) {
                 const data = await res.json();
                 this.messages.push({
                     id: data.id,
+                    type: 'text',
                     body: text,
                     sender_type: 'client',
                     read_at: null,
@@ -158,6 +167,7 @@ export default function clientChat({ token, initialMessages }) {
             if (!confirm('Удалить сообщение?')) return;
 
             if (this.editingId === m.id) this.cancelEdit();
+            if (this.playingId === m.id) this.stopPlayback();
 
             await fetch(`/c/${this.token}/messages/${m.id}`, {
                 method: 'DELETE',
@@ -170,6 +180,104 @@ export default function clientChat({ token, initialMessages }) {
             m.deleted_at = new Date().toISOString();
             m.body = '';
             m.original_body = null;
+        },
+
+        async startRecording() {
+            if (this.recording || this.editingId) return;
+
+            this.recorder = createRecorder();
+            try {
+                await this.recorder.start();
+            } catch (e) {
+                alert('Не удалось получить доступ к микрофону.');
+                return;
+            }
+
+            this.recording = true;
+            this.recordSeconds = 0;
+            this.recordTimer = setInterval(() => {
+                this.recordSeconds++;
+            }, 1000);
+        },
+
+        cancelRecording() {
+            if (!this.recording) return;
+            clearInterval(this.recordTimer);
+            this.recording = false;
+            this.recorder?.cancel();
+            this.recorder = null;
+        },
+
+        async stopAndSendRecording() {
+            if (!this.recording) return;
+            clearInterval(this.recordTimer);
+            this.recording = false;
+
+            const duration = this.recordSeconds;
+            const blob = await this.recorder.stop();
+            this.recorder = null;
+
+            if (!blob || duration < 1) return;
+
+            const form = new FormData();
+            form.append('audio', blob, 'voice.webm');
+            form.append('duration', duration);
+
+            const res = await fetch(`/c/${this.token}/messages/voice`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': window.APP_CONFIG.csrfToken,
+                    'X-Socket-ID': echo.socketId() || '',
+                },
+                body: form,
+            });
+            const data = await res.json();
+
+            this.messages.push({
+                id: data.id,
+                type: 'voice',
+                body: null,
+                sender_type: 'client',
+                read_at: null,
+                edited_at: null,
+                original_body: null,
+                deleted_at: null,
+                voice_duration: data.voice_duration,
+                created_at: data.created_at,
+            });
+            this.scrollToBottom();
+        },
+
+        voiceUrl(m) {
+            return `/c/${this.token}/voice/${m.id}`;
+        },
+
+        toggleVoicePlay(m) {
+            const audio = this.$refs.audioPlayer;
+            if (!audio) return;
+
+            if (this.playingId === m.id) {
+                audio.pause();
+                this.playingId = null;
+                return;
+            }
+
+            audio.src = this.voiceUrl(m);
+            audio.play();
+            this.playingId = m.id;
+        },
+
+        stopPlayback() {
+            const audio = this.$refs.audioPlayer;
+            audio?.pause();
+            this.playingId = null;
+            this.audioProgress = 0;
+        },
+
+        onAudioTimeUpdate() {
+            const audio = this.$refs.audioPlayer;
+            if (!audio || !audio.duration) return;
+            this.audioProgress = (audio.currentTime / audio.duration) * 100;
         },
 
         markRead() {

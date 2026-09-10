@@ -6,7 +6,6 @@ use App\Events\MessageCreated;
 use App\Models\PushSubscription;
 use App\Services\WebPushService;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Support\Str;
 
 class SendWebPushNotification implements ShouldQueue
 {
@@ -35,6 +34,6 @@ class SendWebPushNotification implements ShouldQueue
             return;
         }
 
-        $this->webPush->sendToMany($subscriptions, $title, Str::limit($message->body, 120), $url);
+        $this->webPush->sendToMany($subscriptions, $title, $message->previewText(120), $url);
     }
 }
