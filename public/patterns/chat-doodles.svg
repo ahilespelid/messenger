@@ -1,116 +1,101 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480" width="480" height="480">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 420" width="420" height="420">
   <defs>
-    <g id="star" stroke-linejoin="round">
-      <path d="M0,-11 L2.6,-3.4 L10.5,-3.4 L4.1,1.3 L6.5,9 L0,4.2 L-6.5,9 L-4.1,1.3 L-10.5,-3.4 L-2.6,-3.4 Z"/>
+    <!-- Strawberry -->
+    <g id="strawberry">
+      <path d="M0,-4 C11,-4 17,7 11,17 C7,24 -7,24 -11,17 C-17,7 -11,-4 0,-4 Z"/>
+      <path d="M-6,-4 C-8,-9 -3,-11 0,-8 C3,-11 8,-9 6,-4"/>
+      <path d="M-5,3 l1,3 M0,2 l1,4 M5,3 l1,3 M-3,10 l1,3 M3,10 l1,3"/>
     </g>
-    <g id="heart">
-      <path d="M0,8 C-9,0 -10,-6 -5,-9 C-2,-10.5 0,-8 0,-5 C0,-8 2,-10.5 5,-9 C10,-6 9,0 0,8 Z"/>
+    <!-- Cherries -->
+    <g id="cherries">
+      <path d="M-1,-15 C4,-21 12,-18 12,-12"/>
+      <circle cx="-6" cy="10" r="8"/>
+      <circle cx="7" cy="5" r="8"/>
     </g>
-    <g id="cup">
-      <path d="M-7,-4 h12 v7 a6,6 0 0 1 -6,6 h0 a6,6 0 0 1 -6,-6 Z"/>
-      <path d="M5,-2 q6,0 6,4 q0,4 -6,4"/>
-      <path d="M-3,-10 q1,-2 0,-4 M0,-10 q1,-2 0,-4 M3,-10 q1,-2 0,-4"/>
+    <!-- Pineapple -->
+    <g id="pineapple">
+      <path d="M-2,-16 l-5,-7 M0,-17 l0,-8 M2,-16 l5,-7"/>
+      <path d="M-11,-6 h22 a11,15 0 0 1 -22,0 Z"/>
+      <path d="M-11,-6 l22,16 M11,-6 l-22,16 M-11,2 l22,0" opacity="0.8"/>
     </g>
-    <g id="plane">
-      <path d="M-10,4 L10,-8 L1,3 L4,9 L0,5 L-4,7 Z"/>
+    <!-- Watermelon slice -->
+    <g id="watermelon">
+      <path d="M-14,10 A14,14 0 0 1 14,10 Z"/>
+      <path d="M-11,10 A11,11 0 0 1 11,10" opacity="0.8"/>
+      <circle cx="-4" cy="2" r="1"/>
+      <circle cx="4" cy="2" r="1"/>
+      <circle cx="0" cy="6" r="1"/>
     </g>
-    <g id="umbrella">
-      <path d="M-10,0 a10,9 0 0 1 20,0 Z"/>
-      <path d="M0,0 v12 q0,3 -3,3"/>
+    <!-- Orange slice -->
+    <g id="orange">
+      <circle cx="0" cy="0" r="13"/>
+      <path d="M0,-13 V13 M-11.3,-6.5 L11.3,6.5 M-11.3,6.5 L11.3,-6.5"/>
     </g>
-    <g id="balloon">
-      <path d="M0,-9 a7,8 0 1 1 -0.1,0 Z"/>
-      <path d="M0,-1 L-1.5,3 L1.5,5 L-1,9"/>
+    <!-- Banana -->
+    <g id="banana">
+      <path d="M-11,10 C-14,-4 -6,-16 8,-17 C9,-14 7,-12 4,-11 C-4,-8 -8,2 -6,11 C-3,15 3,15 7,11"/>
+      <path d="M7,11 c2,2 1,5 -2,5"/>
     </g>
-    <g id="gift">
-      <rect x="-8" y="-2" width="16" height="12" rx="1"/>
-      <path d="M-8,3 h16"/>
-      <path d="M0,-2 v12"/>
-      <path d="M0,-2 c-2,-6 -8,-6 -6,-1 c1,2 4,1 6,1 c2,0 5,1 6,-1 c2,-5 -4,-5 -6,1 Z"/>
+    <!-- Apple -->
+    <g id="apple">
+      <path d="M0,-6 C8,-10 15,-3 14,6 C13,15 5,20 0,20 C-5,20 -13,15 -14,6 C-15,-3 -8,-10 0,-6 Z"/>
+      <path d="M0,-6 v-6 M0,-12 q4,-3 6,-1"/>
     </g>
-    <g id="cloud">
-      <path d="M-9,3 a5,5 0 0 1 0,-10 a6,6 0 0 1 11,-2 a5,5 0 0 1 3,9.5 a4,4 0 0 1 -1,2.5 Z"/>
+    <!-- Grapes -->
+    <g id="grapes">
+      <path d="M0,-16 v5"/>
+      <circle cx="-5" cy="-6" r="5"/>
+      <circle cx="5" cy="-6" r="5"/>
+      <circle cx="-8" cy="4" r="5"/>
+      <circle cx="0" cy="6" r="5"/>
+      <circle cx="8" cy="4" r="5"/>
+      <circle cx="-4" cy="14" r="5"/>
+      <circle cx="4" cy="14" r="5"/>
     </g>
-    <g id="note">
-      <circle cx="-5" cy="7" r="3.2"/>
-      <path d="M-1.8,7 V-9 l7,2 v9"/>
+    <!-- Pear -->
+    <g id="pear">
+      <path d="M0,-14 v4"/>
+      <path d="M0,-10 C5,-10 6,-5 4,-2 C11,2 12,12 4,17 C-1,20 -8,18 -10,11 C-12,4 -8,0 -4,-2 C-6,-5 -5,-10 0,-10 Z"/>
     </g>
-    <g id="leaf">
-      <path d="M-8,8 C-8,-4 4,-9 9,-9 C9,-2 4,8 -8,8 Z"/>
-      <path d="M-8,8 C-4,2 2,-3 9,-9"/>
+    <!-- Kiwi slice -->
+    <g id="kiwi">
+      <circle cx="0" cy="0" r="12"/>
+      <circle cx="0" cy="0" r="8" opacity="0.7"/>
+      <circle cx="0" cy="-4" r="1"/>
+      <circle cx="3.5" cy="-1" r="1"/>
+      <circle cx="3.5" cy="3" r="1"/>
+      <circle cx="0" cy="5.5" r="1"/>
+      <circle cx="-3.5" cy="3" r="1"/>
+      <circle cx="-3.5" cy="-1" r="1"/>
     </g>
-    <g id="snow">
-      <path d="M0,-10 V10 M-8.7,-5 L8.7,5 M-8.7,5 L8.7,-5"/>
-      <path d="M0,-10 l-2,3 M0,-10 l2,3 M0,10 l-2,-3 M0,10 l2,-3"/>
+    <!-- Peach -->
+    <g id="peach">
+      <path d="M0,-8 v-4 M0,-12 q3,-3 5,-1"/>
+      <path d="M0,-8 C9,-9 14,-1 12,7 C10,16 2,19 0,19 C-2,19 -10,16 -12,7 C-14,-1 -9,-9 0,-8 Z"/>
+      <path d="M0,-8 C1,0 1,10 0,19" opacity="0.6"/>
     </g>
-    <g id="moon">
-      <path d="M4,-9 a10,10 0 1 0 0,18 a8,8 0 0 1 0,-18 Z"/>
-    </g>
-    <g id="flower">
-      <circle cx="0" cy="-6" r="3"/>
-      <circle cx="5.2" cy="-3" r="3"/>
-      <circle cx="5.2" cy="3" r="3"/>
-      <circle cx="0" cy="6" r="3"/>
-      <circle cx="-5.2" cy="3" r="3"/>
-      <circle cx="-5.2" cy="-3" r="3"/>
-      <circle cx="0" cy="0" r="2.6"/>
-    </g>
-    <g id="cherry">
-      <path d="M-2,-9 C2,-13 8,-11 8,-7"/>
-      <circle cx="-4" cy="6" r="5"/>
-      <circle cx="5" cy="3" r="5"/>
-    </g>
-    <g id="cat">
-      <path d="M-8,3 a8,8 0 1 0 16,0 a8,8 0 1 0 -16,0 Z"/>
-      <path d="M-6,-4 L-8,-11 L-1,-6 Z"/>
-      <path d="M6,-4 L8,-11 L1,-6 Z"/>
-      <circle cx="-3" cy="2" r="1"/>
-      <circle cx="3" cy="2" r="1"/>
-      <path d="M-2,6 q2,2 4,0"/>
-    </g>
-    <g id="fish">
-      <path d="M-9,0 C-6,-6 4,-6 9,0 C4,6 -6,6 -9,0 Z"/>
-      <path d="M9,0 l5,-4 v8 Z"/>
-      <circle cx="-5" cy="-1" r="1"/>
-    </g>
-    <g id="bell">
-      <path d="M0,-9 a6,6 0 0 1 6,6 v3 q0,3 3,4 h-18 q3,-1 3,-4 v-3 a6,6 0 0 1 6,-6 Z"/>
-      <path d="M-3,6 a3,3 0 0 0 6,0"/>
+    <!-- Lemon -->
+    <g id="lemon">
+      <path d="M-14,0 C-14,-7 -7,-11 0,-11 C7,-11 14,-7 14,0 C14,7 7,11 0,11 C-7,11 -14,7 -14,0 Z"/>
+      <path d="M-14,0 q-3,0 -4,0 M14,0 q3,0 4,0"/>
     </g>
   </defs>
 
-  <g fill="none" stroke="#9CA3AF" stroke-width="1.6" stroke-linecap="round" opacity="0.55">
-    <use href="#star" x="40" y="35" transform="rotate(-8 40 35)"/>
-    <use href="#heart" x="150" y="30" transform="rotate(6 150 30) scale(0.9)"/>
-    <use href="#cup" x="260" y="45" transform="rotate(-4 260 45)"/>
-    <use href="#plane" x="360" y="30" transform="rotate(10 360 30)"/>
-    <use href="#umbrella" x="440" y="70" transform="scale(0.85)"/>
+  <g fill="none" stroke="#A3A3A3" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity="0.6">
+    <use href="#strawberry" x="55" y="55" transform="rotate(-8 55 55)"/>
+    <use href="#pineapple" x="210" y="60" transform="rotate(5 210 60)"/>
+    <use href="#cherries" x="360" y="60" transform="rotate(10 360 60)"/>
 
-    <use href="#balloon" x="90" y="110" transform="rotate(-5 90 110)"/>
-    <use href="#cloud" x="200" y="115" transform="scale(1.05)"/>
-    <use href="#gift" x="310" y="115" transform="rotate(5 310 115)"/>
-    <use href="#note" x="420" y="140" transform="rotate(-8 420 140)"/>
+    <use href="#watermelon" x="120" y="160" transform="rotate(-6 120 160) scale(1.1)"/>
+    <use href="#banana" x="280" y="165" transform="rotate(-10 280 165)"/>
 
-    <use href="#leaf" x="30" y="190" transform="rotate(20 30 190)"/>
-    <use href="#snow" x="140" y="195" transform="scale(0.8)"/>
-    <use href="#moon" x="250" y="185" transform="rotate(15 250 185)"/>
-    <use href="#flower" x="365" y="200"/>
-    <use href="#star" x="455" y="215" transform="scale(0.75)"/>
+    <use href="#grapes" x="40" y="255" transform="rotate(6 40 255)"/>
+    <use href="#orange" x="200" y="260"/>
+    <use href="#apple" x="350" y="255" transform="rotate(-5 350 255)"/>
 
-    <use href="#cherry" x="70" y="270" transform="rotate(-10 70 270)"/>
-    <use href="#cat" x="190" y="270"/>
-    <use href="#fish" x="300" y="265" transform="rotate(8 300 265)"/>
-    <use href="#bell" x="410" y="275" transform="scale(0.85)"/>
-
-    <use href="#heart" x="40" y="345" transform="scale(0.75)"/>
-    <use href="#cup" x="130" y="350" transform="rotate(6 130 350) scale(0.85)"/>
-    <use href="#plane" x="230" y="340" transform="rotate(-12 230 340)"/>
-    <use href="#umbrella" x="330" y="350" transform="rotate(6 330 350) scale(0.8)"/>
-    <use href="#gift" x="430" y="355" transform="scale(0.8)"/>
-
-    <use href="#note" x="90" y="420" transform="scale(0.9)"/>
-    <use href="#leaf" x="200" y="425" transform="rotate(-25 200 425)"/>
-    <use href="#flower" x="300" y="430" transform="scale(0.8)"/>
-    <use href="#star" x="400" y="430" transform="rotate(12 400 430)"/>
+    <use href="#kiwi" x="110" y="355" transform="rotate(8 110 355)"/>
+    <use href="#pear" x="260" y="360" transform="rotate(-4 260 360)"/>
+    <use href="#peach" x="20" y="130" transform="scale(0.9)"/>
+    <use href="#lemon" x="380" y="360" transform="rotate(12 380 360) scale(0.9)"/>
   </g>
 </svg>
