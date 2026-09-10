@@ -7,15 +7,21 @@ function formatTime(iso) {
     return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-export default function operatorApp({ conversations, activeToken, initialMessages }) {
+export default function operatorApp({ conversations, colleagues, meId, activeToken, initialMessages }) {
     return {
         conversations: conversations || [],
+        colleagues: colleagues || [],
+        meId,
+        activeKind: 'client', // 'client' | 'team'
         activeToken: activeToken || null,
+        activeColleagueId: null,
         messages: initialMessages || [],
+        teamMessages: [],
         body: '',
         sending: false,
         onlineClient: false,
         conversationChannel: null,
+        teamChannelPair: null,
         editingId: null,
         recording: false,
         recordSeconds: 0,
@@ -23,6 +29,7 @@ export default function operatorApp({ conversations, activeToken, initialMessage
         recorder: null,
         playingId: null,
         audioProgress: 0,
+        onlineOperatorIds: new Set(),
 
         init() {
             enablePushNotifications();
@@ -31,18 +38,53 @@ export default function operatorApp({ conversations, activeToken, initialMessage
                 this.upsertConversation(e);
             });
 
+            echo.private(`operator.${this.meId}`).listen('.team-message.created', (e) => {
+                this.handlePersonalTeamMessage(e);
+            });
+
+            const idFrom = (memberId) => parseInt(String(memberId).replace('operator-', ''), 10);
+
+            echo.join('operators-online')
+                .here((users) => {
+                    this.onlineOperatorIds = new Set(users.map((u) => idFrom(u.id)));
+                })
+                .joining((user) => {
+                    this.onlineOperatorIds.add(idFrom(user.id));
+                })
+                .leaving((user) => {
+                    this.onlineOperatorIds.delete(idFrom(user.id));
+                });
+
             if (this.activeToken) {
                 this.joinConversationChannel(this.activeToken);
             }
+        },
+
+        isColleagueOnline(id) {
+            return this.onlineOperatorIds.has(id);
         },
 
         formatTime,
         formatDuration,
         formatFileSize,
 
+        hasActivePane() {
+            return !!(this.activeToken || this.activeColleagueId);
+        },
+
+        closeActivePane() {
+            this.activeToken = null;
+            this.activeColleagueId = null;
+        },
+
         activeClientName() {
             const c = this.conversations.find((c) => c.token === this.activeToken);
             return c ? c.client_name : '';
+        },
+
+        activeColleagueName() {
+            const c = this.colleagues.find((c) => c.id === this.activeColleagueId);
+            return c ? c.name : '';
         },
 
         upsertConversation(data) {
@@ -63,6 +105,20 @@ export default function operatorApp({ conversations, activeToken, initialMessage
             }
 
             this.conversations.sort((a, b) => new Date(b.last_message_at) - new Date(a.last_message_at));
+        },
+
+        handlePersonalTeamMessage(e) {
+            // e.recipient_id is always meId here (channel auth guarantees it);
+            // e.sender_id is whichever colleague sent it.
+            const col = this.colleagues.find((c) => c.id === e.sender_id);
+            if (col) {
+                col.last_message = e.body;
+                col.last_message_at = e.created_at;
+                if (this.activeColleagueId !== e.sender_id) {
+                    col.unread_count = (col.unread_count || 0) + 1;
+                }
+            }
+            this.colleagues.sort((a, b) => new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0));
         },
 
         applyUpdate(e) {
@@ -113,6 +169,8 @@ export default function operatorApp({ conversations, activeToken, initialMessage
         async selectConversation(token) {
             this.cancelRecording();
             this.stopPlayback();
+            this.activeKind = 'client';
+            this.activeColleagueId = null;
             this.activeToken = token;
             this.messages = [];
             this.editingId = null;
@@ -133,6 +191,59 @@ export default function operatorApp({ conversations, activeToken, initialMessage
             this.scrollToBottom();
         },
 
+        joinTeamChannel(colleagueId) {
+            if (this.teamChannelPair) {
+                echo.leave(`team.${this.teamChannelPair}`);
+            }
+            const pair = [this.meId, colleagueId].sort((a, b) => a - b).join('-');
+            this.teamChannelPair = pair;
+
+            // Online status for the header comes from the shared
+            // 'operators-online' channel (isColleagueOnline); this presence
+            // channel is joined purely to receive message events for the pair.
+            echo.join(`team.${pair}`)
+                .listen('.team-message.created', (e) => {
+                    if (this.activeKind === 'team' && this.activeColleagueId === colleagueId) {
+                        this.teamMessages.push(e);
+                        this.scrollToBottom();
+                        this.markTeamRead();
+                    }
+                })
+                .listen('.team-message.updated', (e) => {
+                    if (this.activeKind === 'team' && this.activeColleagueId === colleagueId) this.applyTeamUpdate(e);
+                })
+                .listen('.team-message.read', (e) => {
+                    this.teamMessages.forEach((m) => {
+                        if (m.sender_id === this.meId) m.read_at = e.at;
+                    });
+                });
+        },
+
+        async selectColleague(id) {
+            this.cancelRecording();
+            this.stopPlayback();
+            this.activeKind = 'team';
+            this.activeToken = null;
+            this.activeColleagueId = id;
+            this.teamMessages = [];
+            this.editingId = null;
+            this.body = '';
+
+            const col = this.colleagues.find((c) => c.id === id);
+            if (col) col.unread_count = 0;
+
+            history.replaceState(null, '', '/operator');
+
+            this.joinTeamChannel(id);
+
+            const res = await fetch(`/operator/team/${id}/messages`, {
+                headers: { Accept: 'application/json' },
+            });
+            const data = await res.json();
+            this.teamMessages = data.messages;
+            this.scrollToBottom();
+        },
+
         handleEnter(event) {
             if (event.shiftKey) return;
             event.preventDefault();
@@ -140,10 +251,10 @@ export default function operatorApp({ conversations, activeToken, initialMessage
         },
 
         send() {
-            if (this.editingId) {
-                return this.saveEdit();
+            if (this.activeKind === 'team') {
+                return this.editingId ? this.saveTeamEdit() : this.sendTeamNew();
             }
-            return this.sendNew();
+            return this.editingId ? this.saveEdit() : this.sendNew();
         },
 
         async sendNew() {
@@ -265,6 +376,140 @@ export default function operatorApp({ conversations, activeToken, initialMessage
                 m.revealing = false;
             }
         },
+
+        // --- Internal team DMs (text-only) ---
+
+        async sendTeamNew() {
+            const text = this.body.trim();
+            if (!text || this.sending || !this.activeColleagueId) return;
+
+            this.sending = true;
+            this.body = '';
+
+            try {
+                const res = await fetch(`/operator/team/${this.activeColleagueId}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': window.APP_CONFIG.csrfToken,
+                        'X-Socket-ID': echo.socketId() || '',
+                    },
+                    body: JSON.stringify({ body: text }),
+                });
+                const data = await res.json();
+                this.teamMessages.push({
+                    id: data.id,
+                    sender_id: this.meId,
+                    recipient_id: this.activeColleagueId,
+                    body: text,
+                    original_body: null,
+                    read_at: null,
+                    edited_at: null,
+                    deleted_at: null,
+                    created_at: data.created_at,
+                });
+                this.scrollToBottom();
+            } finally {
+                this.sending = false;
+            }
+        },
+
+        startTeamEdit(m) {
+            this.editingId = m.id;
+            this.body = m.body;
+            this.$nextTick(() => this.$refs.input?.focus());
+        },
+
+        async saveTeamEdit() {
+            const text = this.body.trim();
+            if (!text || this.sending || !this.activeColleagueId) return;
+
+            const id = this.editingId;
+            this.sending = true;
+
+            try {
+                const res = await fetch(`/operator/team/${this.activeColleagueId}/messages/${id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': window.APP_CONFIG.csrfToken,
+                        'X-Socket-ID': echo.socketId() || '',
+                    },
+                    body: JSON.stringify({ body: text }),
+                });
+                const data = await res.json();
+                const message = this.teamMessages.find((m) => m.id === id);
+                if (message) {
+                    if (!message.edited_at) message.original_body = message.body;
+                    message.body = text;
+                    message.edited_at = data.edited_at;
+                }
+                this.editingId = null;
+                this.body = '';
+            } finally {
+                this.sending = false;
+            }
+        },
+
+        async deleteTeamMessage(m) {
+            if (!confirm('Удалить сообщение?')) return;
+            if (!this.activeColleagueId) return;
+
+            if (this.editingId === m.id) this.cancelEdit();
+
+            await fetch(`/operator/team/${this.activeColleagueId}/messages/${m.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': window.APP_CONFIG.csrfToken,
+                    'X-Socket-ID': echo.socketId() || '',
+                },
+            });
+
+            m.deleted_at = new Date().toISOString();
+            m.body = '';
+            m.original_body = null;
+        },
+
+        async revealTeamMessage(m) {
+            if (!this.activeColleagueId || m.revealing) return;
+            m.revealing = true;
+
+            try {
+                const res = await fetch(`/operator/team/${this.activeColleagueId}/messages/${m.id}/reveal`, {
+                    headers: { Accept: 'application/json' },
+                });
+                if (!res.ok) return;
+
+                const data = await res.json();
+                m.body = data.body;
+                m.original_body = data.original_body;
+                m.revealed = true;
+            } finally {
+                m.revealing = false;
+            }
+        },
+
+        applyTeamUpdate(e) {
+            const message = this.teamMessages.find((m) => m.id === e.id);
+            if (!message) return;
+            message.body = e.body;
+            message.original_body = e.original_body;
+            message.edited_at = e.edited_at;
+            message.deleted_at = e.deleted_at;
+        },
+
+        markTeamRead() {
+            if (!this.activeColleagueId) return;
+            fetch(`/operator/team/${this.activeColleagueId}/read`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': window.APP_CONFIG.csrfToken,
+                    'X-Socket-ID': echo.socketId() || '',
+                },
+            });
+        },
+
+        // --- Voice ---
 
         async startRecording() {
             if (this.recording || this.editingId || !this.activeToken) return;

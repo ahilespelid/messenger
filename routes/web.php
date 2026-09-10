@@ -5,6 +5,7 @@ use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\Operator\DashboardController;
 use App\Http\Controllers\Operator\MessageController as OperatorMessageController;
+use App\Http\Controllers\Operator\TeamMessageController;
 use App\Http\Controllers\PushSubscriptionController;
 use Illuminate\Support\Facades\Route;
 
@@ -46,4 +47,12 @@ Route::middleware('auth')->prefix('operator')->name('operator.')->group(function
     Route::get('/conversations/{conversation:token}/voice/{message}', [OperatorMessageController::class, 'streamVoice'])->name('conversations.voice.show');
     Route::get('/conversations/{conversation:token}/file/{message}', [OperatorMessageController::class, 'streamFile'])->name('conversations.file.show');
     Route::post('/conversations/{conversation:token}/read', [DashboardController::class, 'markRead'])->name('conversations.read');
+
+    // Internal DMs between operators ("pinned" colleagues in the sidebar)
+    Route::get('/team/{colleague}/messages', [TeamMessageController::class, 'index'])->name('team.messages');
+    Route::post('/team/{colleague}/messages', [TeamMessageController::class, 'store'])->name('team.messages.store');
+    Route::patch('/team/{colleague}/messages/{message}', [TeamMessageController::class, 'update'])->name('team.messages.update');
+    Route::delete('/team/{colleague}/messages/{message}', [TeamMessageController::class, 'destroy'])->name('team.messages.destroy');
+    Route::get('/team/{colleague}/messages/{message}/reveal', [TeamMessageController::class, 'reveal'])->name('team.messages.reveal');
+    Route::post('/team/{colleague}/read', [TeamMessageController::class, 'markRead'])->name('team.read');
 });
