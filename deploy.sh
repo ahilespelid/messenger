@@ -5,21 +5,33 @@
 # Usage (run from inside the cloned repo, as root):
 #   git clone https://github.com/ahilespelid/messenger.git
 #   cd messenger
-#   sudo ./deploy.sh chat.example.com admin@example.com
+#   sudo ./deploy.sh <domain-or-ip> [operator-email]
 #
-# The domain must already have a DNS A record pointing at this server's IP —
-# Caddy (bundled with FrankenPHP) needs that to issue a Let's Encrypt
-# certificate automatically. Re-running this script on an existing install
-# just pulls the latest code, rebuilds, and restarts (your .env is kept).
+# Examples:
+#   sudo ./deploy.sh 203.0.113.10                     # no domain yet — plain HTTP
+#   sudo ./deploy.sh chat.example.com admin@example.com  # real domain — auto HTTPS
+#
+# Pass a bare IP address when you don't have a domain pointed at this server
+# yet: the site comes up over plain HTTP on that IP (browsers can't get a
+# trusted certificate for a raw IP, so HTTPS is skipped). Once you have a
+# domain/subdomain, point its A record at this server and re-run this script
+# with the domain instead — see "Switching from IP to a domain later" in
+# README.md; it flips a couple of .env values and Caddy takes care of the
+# certificate automatically.
+#
+# Re-running this script on an existing install just pulls the latest code,
+# rebuilds, and restarts — it never overwrites an existing .env.
 
 set -euo pipefail
 
-DOMAIN="${1:-}"
-OPERATOR_EMAIL="${2:-admin@${DOMAIN}}"
+TARGET="${1:-}"
+OPERATOR_EMAIL="${2:-admin@example.com}"
 
-if [[ -z "$DOMAIN" ]]; then
-    echo "Usage: sudo $0 <domain> [operator-email]" >&2
-    echo "Example: sudo $0 chat.example.com admin@example.com" >&2
+if [[ -z "$TARGET" ]]; then
+    echo "Usage: sudo $0 <domain-or-ip> [operator-email]" >&2
+    echo "Examples:" >&2
+    echo "  sudo $0 203.0.113.10" >&2
+    echo "  sudo $0 chat.example.com admin@example.com" >&2
     exit 1
 fi
 
@@ -31,6 +43,19 @@ fi
 if [[ ! -f docker-compose.yml || ! -f .env.example ]]; then
     echo "Run this script from inside the cloned repository (docker-compose.yml not found here)." >&2
     exit 1
+fi
+
+# A bare IPv4 address means "no domain yet" -> plain HTTP, no Let's Encrypt.
+if [[ "$TARGET" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+    MODE="ip"
+    APP_HTTPS_VALUE="false"
+    SCHEME="http"
+    REVERB_PORT_VALUE="80"
+else
+    MODE="domain"
+    APP_HTTPS_VALUE="true"
+    SCHEME="https"
+    REVERB_PORT_VALUE="443"
 fi
 
 echo "==> Installing prerequisites"
@@ -50,8 +75,9 @@ if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
     ufw allow 443/udp || true
     echo "    ufw is active — opened 80/tcp, 443/tcp, 443/udp"
 else
-    echo "    ufw is not active on this host — make sure 80/tcp, 443/tcp and"
-    echo "    443/udp are open in your cloud provider's firewall/security group."
+    echo "    ufw is not active on this host — make sure 80/tcp is open"
+    echo "    (plus 443/tcp and 443/udp once you switch to a domain) in your"
+    echo "    cloud provider's firewall/security group."
 fi
 
 echo "==> Preparing .env"
@@ -65,30 +91,36 @@ if [[ ! -f .env ]]; then
     REVERB_APP_SECRET="$(openssl rand -hex 24)"
     OPERATOR_PASSWORD="$(openssl rand -hex 8)"
 
-    sed -i "s|^APP_ENV=.*|APP_ENV=production|" .env
-    sed -i "s|^APP_DEBUG=.*|APP_DEBUG=false|" .env
     sed -i "s|^APP_KEY=.*|APP_KEY=${APP_KEY}|" .env
-    sed -i "s|^APP_URL=.*|APP_URL=https://${DOMAIN}|" .env
-    sed -i "s|^APP_DOMAIN=.*|APP_DOMAIN=${DOMAIN}|" .env
     sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${DB_PASSWORD}|" .env
     sed -i "s|^DB_ROOT_PASSWORD=.*|DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}|" .env
     sed -i "s|^REVERB_APP_KEY=.*|REVERB_APP_KEY=${REVERB_APP_KEY}|" .env
     sed -i "s|^REVERB_APP_SECRET=.*|REVERB_APP_SECRET=${REVERB_APP_SECRET}|" .env
-    sed -i "s|^VAPID_SUBJECT=.*|VAPID_SUBJECT=mailto:${OPERATOR_EMAIL}|" .env
-    sed -i "s|^OPERATOR_EMAIL=.*|OPERATOR_EMAIL=${OPERATOR_EMAIL}|" .env
     sed -i "s|^OPERATOR_PASSWORD=.*|OPERATOR_PASSWORD=${OPERATOR_PASSWORD}|" .env
 
     NEW_ENV=1
 else
-    echo "    .env already exists — leaving it as-is (delete it first for a fresh setup)"
+    echo "    .env already exists — keeping existing secrets, syncing domain/scheme"
     NEW_ENV=0
 fi
+
+# These are safe to re-sync on every run (e.g. switching from a bare IP to a
+# domain later never touches secrets, only where/how the site is reachable).
+sed -i "s|^APP_ENV=.*|APP_ENV=production|" .env
+sed -i "s|^APP_DEBUG=.*|APP_DEBUG=false|" .env
+sed -i "s|^APP_URL=.*|APP_URL=${SCHEME}://${TARGET}|" .env
+sed -i "s|^APP_DOMAIN=.*|APP_DOMAIN=${TARGET}|" .env
+sed -i "s|^APP_HTTPS=.*|APP_HTTPS=${APP_HTTPS_VALUE}|" .env
+sed -i "s|^REVERB_CLIENT_PORT=.*|REVERB_CLIENT_PORT=${REVERB_PORT_VALUE}|" .env
+sed -i "s|^REVERB_CLIENT_SCHEME=.*|REVERB_CLIENT_SCHEME=${SCHEME}|" .env
+sed -i "s|^VAPID_SUBJECT=.*|VAPID_SUBJECT=mailto:${OPERATOR_EMAIL}|" .env
+sed -i "s|^OPERATOR_EMAIL=.*|OPERATOR_EMAIL=${OPERATOR_EMAIL}|" .env
 
 echo "==> Building images (this can take a few minutes the first time)"
 docker compose build
 
 echo "==> Starting services"
-docker compose up -d
+docker compose up -d --force-recreate
 
 echo "==> Waiting for the app container to be ready"
 for i in $(seq 1 30); do
@@ -113,15 +145,27 @@ echo ""
 echo "================================================================"
 echo " Deployed."
 echo ""
-echo "   Client widget:   https://${DOMAIN}"
-echo "   Operator login:  https://${DOMAIN}/login"
+echo "   Client widget:   ${SCHEME}://${TARGET}"
+echo "   Operator login:  ${SCHEME}://${TARGET}/login"
 if [[ "${NEW_ENV:-0}" -eq 1 ]]; then
     echo "   Operator email:    ${OPERATOR_EMAIL}"
     echo "   Operator password: ${OPERATOR_PASSWORD}"
     echo ""
     echo "   (These credentials are saved in .env — OPERATOR_EMAIL / OPERATOR_PASSWORD)"
+else
+    echo "   Operator password unchanged — see OPERATOR_PASSWORD in .env"
 fi
-echo ""
-echo " If the site doesn't load over HTTPS yet, give Caddy a minute to obtain"
-echo " a Let's Encrypt certificate, then check: docker compose logs -f app"
+if [[ "$MODE" == "ip" ]]; then
+    echo ""
+    echo " Running over plain HTTP on the IP — no domain yet, so no HTTPS."
+    echo " Once you point a domain/subdomain at this server, re-run:"
+    echo "     sudo $0 messenger.your-domain.ru ${OPERATOR_EMAIL}"
+    echo " after editing .env as described in \"Switching from IP to a domain"
+    echo " later\" in README.md — Caddy will fetch a Let's Encrypt certificate"
+    echo " automatically."
+else
+    echo ""
+    echo " If the site doesn't load over HTTPS yet, give Caddy a minute to obtain"
+    echo " a Let's Encrypt certificate, then check: docker compose logs -f app"
+fi
 echo "================================================================"
