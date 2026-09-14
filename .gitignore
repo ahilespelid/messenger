@@ -4,6 +4,7 @@
 .env.backup
 .env.production
 demo_password.txt
+/backups
 .phpactor.json
 .phpunit.result.cache
 /.codex

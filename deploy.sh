@@ -172,6 +172,16 @@ This file is regenerated on every deploy.sh run and is not tracked by git.
 EOF
 chmod 600 demo_password.txt
 
+echo "==> Scheduling daily backups"
+chmod +x scripts/backup.sh scripts/restore.sh
+CRON_LINE="0 3 * * * cd $(pwd) && ./scripts/backup.sh >> backups/backup.log 2>&1"
+if ! (crontab -l 2>/dev/null | grep -qF "scripts/backup.sh"); then
+    (crontab -l 2>/dev/null; echo "$CRON_LINE") | crontab -
+    echo "    Installed: daily backup at 03:00 server time (root's crontab)"
+else
+    echo "    Daily backup already scheduled — leaving crontab as-is"
+fi
+
 echo ""
 echo "================================================================"
 echo " Deployed."
@@ -180,6 +190,10 @@ echo "   Client widget:  ${SCHEME}://${TARGET}"
 echo "   Operator link:  ${OPERATOR_LINK}"
 echo ""
 echo "   No password — that link is the login. Also saved to: $(pwd)/demo_password.txt"
+echo ""
+echo "   Daily DB + file backups run at 03:00 into $(pwd)/backups"
+echo "   (survive even 'docker compose down -v'). Restore with:"
+echo "       ./scripts/restore.sh backups/daily/<timestamp>"
 if [[ "$MODE" == "ip" ]]; then
     echo ""
     echo " Running over plain HTTP on the IP — no domain yet, so no HTTPS."
