@@ -4,7 +4,9 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\Operator\DashboardController;
+use App\Http\Controllers\Operator\InviteController;
 use App\Http\Controllers\Operator\MessageController as OperatorMessageController;
+use App\Http\Controllers\Operator\SessionController;
 use App\Http\Controllers\Operator\TeamMessageController;
 use App\Http\Controllers\PushSubscriptionController;
 use Illuminate\Support\Facades\Route;
@@ -26,11 +28,10 @@ Route::post('/c/{token}/read', [ConversationController::class, 'markRead'])->nam
 Route::post('/push/subscribe', [PushSubscriptionController::class, 'store'])->name('push.subscribe');
 Route::post('/push/unsubscribe', [PushSubscriptionController::class, 'destroy'])->name('push.unsubscribe');
 
-// Operator auth
-Route::middleware('guest')->group(function () {
-    Route::get('/login', [AuthController::class, 'create'])->name('login');
-    Route::post('/login', [AuthController::class, 'store'])->name('login.store');
-});
+// Operator access — no password, a personal secret link is the credential
+// (see `php artisan operator:create`), same model as the client widget.
+Route::get('/op/{token}', [AuthController::class, 'loginViaLink'])->name('operator.link');
+Route::get('/operator/no-access', fn () => view('operator.no-access'))->name('operator.no-access');
 Route::post('/logout', [AuthController::class, 'destroy'])->middleware('auth')->name('logout');
 
 // Operator dashboard
@@ -57,4 +58,13 @@ Route::middleware('auth')->prefix('operator')->name('operator.')->group(function
     Route::delete('/team/{colleague}/messages/{message}', [TeamMessageController::class, 'destroy'])->name('team.messages.destroy');
     Route::get('/team/{colleague}/messages/{message}/reveal', [TeamMessageController::class, 'reveal'])->name('team.messages.reveal');
     Route::post('/team/{colleague}/read', [TeamMessageController::class, 'markRead'])->name('team.read');
+
+    // Any operator can invite another (self-service — no admin required).
+    Route::post('/invites', [InviteController::class, 'store'])->name('invites.store');
+
+    // Admin-only: see and end any operator/client session by name.
+    Route::middleware('admin')->group(function () {
+        Route::get('/sessions', [SessionController::class, 'index'])->name('sessions.index');
+        Route::delete('/sessions/{sessionId}', [SessionController::class, 'destroy'])->name('sessions.destroy');
+    });
 });

@@ -2,33 +2,30 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    public function create()
+    /**
+     * Visiting a personal link *is* logging in — no password, no form.
+     * Knowledge of the (unguessable) access token is the credential,
+     * exactly like the client's /c/{token} link.
+     */
+    public function loginViaLink(string $token)
     {
-        return view('auth.login');
-    }
+        $user = User::where('access_token', $token)->first();
 
-    public function store(Request $request)
-    {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
-        ]);
-
-        if (! Auth::attempt($credentials, true)) {
-            throw ValidationException::withMessages([
-                'email' => 'Неверный email или пароль.',
-            ]);
+        if (! $user) {
+            return response()->view('operator.no-access', [], 404);
         }
 
-        $request->session()->regenerate();
+        Auth::login($user, remember: true);
 
-        return redirect()->intended(route('operator.dashboard'));
+        request()->session()->regenerate();
+
+        return redirect()->route('operator.dashboard');
     }
 
     public function destroy(Request $request)
@@ -38,6 +35,6 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login');
+        return redirect()->route('operator.no-access');
     }
 }

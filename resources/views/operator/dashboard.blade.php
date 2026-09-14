@@ -11,6 +11,7 @@
         colleagues: @js($colleagues),
         meId: @js(auth()->id()),
         meName: @js(auth()->user()->name),
+        isAdmin: @js($isAdmin),
         activeToken: @js($activeConversation?->token),
         initialMessages: @js(collect($messages)->map(fn ($m) => $m->toBroadcastArray())),
     })"
@@ -19,10 +20,44 @@
     <aside class="w-full sm:w-80 shrink-0 bg-white border-r flex-col" :class="hasActivePane() ? 'hidden sm:flex' : 'flex'">
         <div class="px-4 py-3 border-b flex items-center justify-between shrink-0">
             <h1 class="font-semibold text-gray-900">Диалоги</h1>
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button class="text-xs text-gray-400 hover:text-gray-700">Выйти</button>
-            </form>
+            <div class="flex items-center gap-3">
+                <button type="button" @click="openInvite()" title="Пригласить оператора"
+                        class="text-xs text-gray-400 hover:text-gray-700">+ оператор</button>
+                @if($isAdmin)
+                    <a href="{{ route('operator.sessions.index') }}" title="Активные сессии"
+                       class="text-xs text-gray-400 hover:text-gray-700">Сессии</a>
+                @endif
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button class="text-xs text-gray-400 hover:text-gray-700">Выйти</button>
+                </form>
+            </div>
+        </div>
+
+        <div x-show="inviteOpen" x-cloak class="border-b border-gray-100 bg-gray-50 px-4 py-3">
+            <template x-if="!inviteLink">
+                <form @submit.prevent="submitInvite()" class="space-y-2">
+                    <p class="text-xs text-gray-500">Имя нового оператора</p>
+                    <input type="text" x-model="inviteName" placeholder="Например, Мария"
+                           class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-gray-900 focus:ring-gray-900">
+                    <div class="flex items-center gap-2">
+                        <button type="submit" :disabled="!inviteName.trim() || inviteSending"
+                                class="text-xs bg-gray-900 text-white rounded-lg px-3 py-1.5 disabled:opacity-40">Создать ссылку</button>
+                        <button type="button" @click="inviteOpen = false" class="text-xs text-gray-400">Отмена</button>
+                    </div>
+                </form>
+            </template>
+            <template x-if="inviteLink">
+                <div class="space-y-2">
+                    <p class="text-xs text-gray-500">Ссылка для <span class="font-medium" x-text="inviteName"></span> — передайте лично, она заменяет пароль:</p>
+                    <div class="flex items-center gap-2">
+                        <input type="text" readonly :value="inviteLink" x-ref="inviteLinkInput" @click="$refs.inviteLinkInput.select()"
+                               class="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs font-mono bg-white">
+                        <button type="button" @click="copyInviteLink()" class="text-xs bg-gray-900 text-white rounded-lg px-3 py-1.5" x-text="inviteCopied ? 'Скопировано' : 'Копировать'"></button>
+                    </div>
+                    <button type="button" @click="closeInvite()" class="text-xs text-gray-400">Закрыть</button>
+                </div>
+            </template>
         </div>
         <div class="flex-1 overflow-y-auto">
             <div class="border-b border-gray-100">

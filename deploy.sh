@@ -89,14 +89,14 @@ if [[ ! -f .env ]]; then
     DB_ROOT_PASSWORD="$(openssl rand -hex 16)"
     REVERB_APP_KEY="$(openssl rand -hex 16)"
     REVERB_APP_SECRET="$(openssl rand -hex 24)"
-    OPERATOR_PASSWORD="$(openssl rand -hex 8)"
+    OPERATOR_ACCESS_TOKEN="$(openssl rand -hex 20)"
 
     sed -i "s|^APP_KEY=.*|APP_KEY=${APP_KEY}|" .env
     sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${DB_PASSWORD}|" .env
     sed -i "s|^DB_ROOT_PASSWORD=.*|DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}|" .env
     sed -i "s|^REVERB_APP_KEY=.*|REVERB_APP_KEY=${REVERB_APP_KEY}|" .env
     sed -i "s|^REVERB_APP_SECRET=.*|REVERB_APP_SECRET=${REVERB_APP_SECRET}|" .env
-    sed -i "s|^OPERATOR_PASSWORD=.*|OPERATOR_PASSWORD=${OPERATOR_PASSWORD}|" .env
+    sed -i "s|^OPERATOR_ACCESS_TOKEN=.*|OPERATOR_ACCESS_TOKEN=${OPERATOR_ACCESS_TOKEN}|" .env
 
     # OPERATOR_EMAIL identifies which user row the seeder treats as "the"
     # operator — it must never change on a later re-run (e.g. switching from
@@ -114,7 +114,7 @@ else
     if [[ "$2" != "" && "$2" != "$EXISTING_EMAIL" ]]; then
         echo "    Note: ignoring '$2' — this server's operator account is"
         echo "    already ${EXISTING_EMAIL}. To add another operator, use:"
-        echo "        docker compose exec app php artisan operator:create <email> <password> [name]"
+        echo "        docker compose exec app php artisan operator:create <email> [name]"
     fi
 fi
 
@@ -154,20 +154,20 @@ if ! grep -q '^VAPID_PUBLIC_KEY=.\+' .env; then
     docker compose up -d --force-recreate app queue
 fi
 
-# Always write the current credentials to a plain file — copy/pasting from
-# here avoids browser autofill silently substituting an old saved password,
-# which is exactly what happened testing this.
+# Always write the current access link to a plain file so it's easy to
+# copy/paste and hand to the operator without retyping anything.
 CURRENT_OPERATOR_EMAIL="$(grep '^OPERATOR_EMAIL=' .env | cut -d= -f2-)"
-CURRENT_OPERATOR_PASSWORD="$(grep '^OPERATOR_PASSWORD=' .env | cut -d= -f2-)"
+CURRENT_OPERATOR_TOKEN="$(docker compose exec -T db sh -c "mysql -N -uroot -p\$MYSQL_ROOT_PASSWORD -D \$MYSQL_DATABASE -e \"SELECT access_token FROM users WHERE email='${CURRENT_OPERATOR_EMAIL}'\"" 2>/dev/null | tr -d '\r')"
+OPERATOR_LINK="${SCHEME}://${TARGET}/op/${CURRENT_OPERATOR_TOKEN}"
 
 cat > demo_password.txt <<EOF
-Messenger — operator login
+Messenger — operator access
 Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 
-URL:      ${SCHEME}://${TARGET}/login
-Email:    ${CURRENT_OPERATOR_EMAIL}
-Password: ${CURRENT_OPERATOR_PASSWORD}
+No password — this link *is* the login. Bookmark it, don't share it.
+${OPERATOR_LINK}
 
+To add another operator: docker compose exec app php artisan operator:create <email> [name]
 This file is regenerated on every deploy.sh run and is not tracked by git.
 EOF
 chmod 600 demo_password.txt
@@ -176,12 +176,10 @@ echo ""
 echo "================================================================"
 echo " Deployed."
 echo ""
-echo "   Client widget:   ${SCHEME}://${TARGET}"
-echo "   Operator login:  ${SCHEME}://${TARGET}/login"
-echo "   Operator email:    ${CURRENT_OPERATOR_EMAIL}"
-echo "   Operator password: ${CURRENT_OPERATOR_PASSWORD}"
+echo "   Client widget:  ${SCHEME}://${TARGET}"
+echo "   Operator link:  ${OPERATOR_LINK}"
 echo ""
-echo "   Also saved to: $(pwd)/demo_password.txt"
+echo "   No password — that link is the login. Also saved to: $(pwd)/demo_password.txt"
 if [[ "$MODE" == "ip" ]]; then
     echo ""
     echo " Running over plain HTTP on the IP — no domain yet, so no HTTPS."

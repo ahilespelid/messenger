@@ -7,12 +7,18 @@ function formatTime(iso) {
     return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-export default function operatorApp({ conversations, colleagues, meId, meName, activeToken, initialMessages }) {
+export default function operatorApp({ conversations, colleagues, meId, meName, isAdmin, activeToken, initialMessages }) {
     return {
         conversations: conversations || [],
         colleagues: colleagues || [],
         meId,
         meName,
+        isAdmin,
+        inviteOpen: false,
+        inviteName: '',
+        inviteLink: '',
+        inviteSending: false,
+        inviteCopied: false,
         activeKind: 'client', // 'client' | 'team'
         activeToken: activeToken || null,
         activeColleagueId: null,
@@ -731,6 +737,53 @@ export default function operatorApp({ conversations, colleagues, meId, meName, a
                 const el = this.$refs.scroll;
                 if (el) el.scrollTop = el.scrollHeight;
             });
+        },
+
+        openInvite() {
+            this.inviteOpen = true;
+            this.inviteName = '';
+            this.inviteLink = '';
+            this.inviteCopied = false;
+        },
+
+        closeInvite() {
+            this.inviteOpen = false;
+        },
+
+        async submitInvite() {
+            const name = this.inviteName.trim();
+            if (!name || this.inviteSending) return;
+
+            this.inviteSending = true;
+            try {
+                const res = await fetch('/operator/invites', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': window.APP_CONFIG.csrfToken,
+                    },
+                    body: JSON.stringify({ name }),
+                });
+                if (!res.ok) {
+                    alert('Не удалось создать ссылку.');
+                    return;
+                }
+                const data = await res.json();
+                this.inviteName = data.name;
+                this.inviteLink = data.link;
+            } finally {
+                this.inviteSending = false;
+            }
+        },
+
+        async copyInviteLink() {
+            try {
+                await navigator.clipboard.writeText(this.inviteLink);
+            } catch (e) {
+                this.$refs.inviteLinkInput?.select();
+            }
+            this.inviteCopied = true;
+            setTimeout(() => (this.inviteCopied = false), 2000);
         },
     };
 }

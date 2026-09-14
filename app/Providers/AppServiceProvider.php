@@ -3,7 +3,7 @@
 namespace App\Providers;
 
 use App\Auth\ConversationGuestProvider;
-use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
+use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\ServiceProvider;
 
@@ -24,11 +24,9 @@ class AppServiceProvider extends ServiceProvider
     {
         Auth::provider('conversation_guest', fn () => new ConversationGuestProvider);
 
-        // The framework default only knows to redirect an already-logged-in
-        // visitor away from /login to a route literally named "dashboard",
-        // falling back to "home" (our client welcome page) otherwise — ours
-        // is named "operator.dashboard", so an operator revisiting /login
-        // was landing on the client form instead of their own dashboard.
-        RedirectIfAuthenticated::redirectUsing(fn () => route('operator.dashboard'));
+        // There's no login form to send an unauthenticated visitor to
+        // anymore (see AuthController::loginViaLink) — the framework
+        // default is route('login'), which no longer exists.
+        Authenticate::redirectUsing(fn () => route('operator.no-access'));
     }
 }

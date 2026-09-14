@@ -16,7 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         attributes: ['middleware' => ['web']],
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->web(append: [\App\Http\Middleware\TrackSessionActivity::class]);
+        $middleware->alias(['admin' => \App\Http\Middleware\EnsureIsAdmin::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

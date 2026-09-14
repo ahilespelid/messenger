@@ -63,8 +63,9 @@
    ```
 
    Скопируйте результат в `APP_KEY` / `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` в `.env`.
-   Для `REVERB_APP_KEY`, `REVERB_APP_SECRET`, `DB_PASSWORD`, `DB_ROOT_PASSWORD`,
-   `OPERATOR_PASSWORD` — впишите любые случайные строки.
+   Для `REVERB_APP_KEY`, `REVERB_APP_SECRET`, `DB_PASSWORD`, `DB_ROOT_PASSWORD` —
+   впишите любые случайные строки. `OPERATOR_ACCESS_TOKEN` можно оставить пустым —
+   сгенерируется сам при первом запуске.
 
    Для локальной проверки оставьте `APP_DOMAIN=localhost` — Caddy сам выпустит
    локальный самоподписанный сертификат (браузер покажет предупреждение — это нормально).
@@ -76,10 +77,18 @@
    ```
 
    При первом старте контейнер `app` сам дождётся базы, накатит миграции и создаст
-   аккаунт оператора из `OPERATOR_EMAIL` / `OPERATOR_PASSWORD`.
+   аккаунт оператора из `OPERATOR_EMAIL` с персональной ссылкой доступа (без пароля).
 
-3. Откройте `https://localhost` — форма клиента, `https://localhost/login` — вход
-   оператора.
+3. Узнайте ссылку оператора:
+
+   ```bash
+   docker compose exec app php artisan operator:create operator@example.com Operator
+   ```
+
+   Команда безопасна для повторного запуска — она не создаёт дубликат и не трогает
+   уже существующий аккаунт, только печатает (или при `--rotate` — перевыпускает)
+   ссылку. Откройте `https://localhost` — форма клиента, ссылка вида
+   `https://localhost/op/<токен>` открывает панель оператора напрямую, без пароля.
 
 ## Деплой на сервер (США)
 
@@ -130,7 +139,8 @@ cd messenger
 sudo ./deploy.sh chat.example.com admin@example.com
 ```
 
-В конце скрипт выведет email и пароль оператора (они же сохранены в `.env`).
+В конце скрипт выведет персональную ссылку оператора (без пароля — сама ссылка
+и есть вход; она же сохранена в `demo_password.txt`).
 Повторный запуск `sudo ./deploy.sh ...` на уже развёрнутом сервере просто
 подтянет свежий код, пересоберёт образы и перезапустит контейнеры — `.env`
 не трогает.
@@ -194,8 +204,9 @@ docker compose ps        # все сервисы должны быть Up (db �
 docker compose logs -f app
 ```
 
-Откройте `https://ваш-домен` — форма клиента, `https://ваш-домен/login` — вход
-оператора (email/пароль из `OPERATOR_EMAIL` / `OPERATOR_PASSWORD` в `.env`).
+Откройте `https://ваш-домен` — форма клиента. Ссылку для входа оператора
+(без пароля) смотрите в `demo_password.txt` или получите командой:
+`docker compose exec app php artisan operator:create <email> <имя>`.
 
 ### Обновление после изменений в коде
 
@@ -225,10 +236,14 @@ docker compose logs -f queue
 # зайти в контейнер приложения
 docker compose exec app sh
 
-# создать/сменить пароль оператора
-docker compose exec app php artisan tinker --execute="
-  \App\Models\User::updateOrCreate(['email' => 'operator@example.com'], ['name' => 'Operator', 'password' => bcrypt('новый-пароль')]);
-"
+# создать оператора / получить его ссылку (можно и из самой панели — кнопка "+ оператор")
+docker compose exec app php artisan operator:create new-op@example.com "Имя"
+
+# перевыпустить чью-то ссылку (старая перестанет работать)
+docker compose exec app php artisan operator:create new-op@example.com --rotate
+
+# сделать оператора администратором (видит и может завершать любые сессии)
+docker compose exec app php artisan operator:create new-op@example.com --admin
 
 # остановить всё
 docker compose down

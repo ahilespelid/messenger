@@ -20,6 +20,7 @@ class DashboardController extends Controller
             'colleagues' => $this->colleagueList(),
             'activeConversation' => null,
             'messages' => [],
+            'isAdmin' => (bool) Auth::user()->is_admin,
         ]);
     }
 
@@ -34,6 +35,7 @@ class DashboardController extends Controller
             'colleagues' => $this->colleagueList(),
             'activeConversation' => $conversation,
             'messages' => $messages,
+            'isAdmin' => (bool) Auth::user()->is_admin,
         ]);
     }
 
